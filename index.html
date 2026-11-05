@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SMC-Net Stuttgart Dispatch Dashboard</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:Inter,Arial,sans-serif;background:#eef2f7;color:#0f172a;overflow:hidden;font-size:11px}
+.app{width:100vw;height:100vh;display:grid;grid-template-columns:420px minmax(460px,1fr) 400px;grid-template-rows:minmax(0,1fr) 150px;grid-template-areas:"left map right" "bottom bottom bottom";gap:0}
+.panel{background:#fff;min-height:0;overflow:hidden;display:flex;flex-direction:column;border-right:1px solid #dbe3ef}
+.left{grid-area:left}
+.rightpanel{grid-area:right;background:#fff;min-height:0;overflow:hidden;display:flex;flex-direction:column;border-left:1px solid #dbe3ef}
+.mapwrap{grid-area:map;position:relative;min-width:0;min-height:0;background:#dbe3ef}
+#map{position:absolute;inset:0;width:100%;height:100%}
+.bottom{grid-area:bottom;background:#fff;border-top:1px solid #dbe3ef;display:grid;grid-template-columns:390px minmax(0,1fr);gap:10px;padding:10px;min-height:0;overflow:hidden}
+.head{padding:10px 12px;border-bottom:1px solid #e2e8f0;flex:0 0 auto}
+.kicker{font-size:9px;font-weight:800;color:#059669;text-transform:uppercase;letter-spacing:.08em}
+h1{margin:2px 0;font-size:14px;line-height:1.15}
+h2{font-size:12px;margin:0 0 7px}
+b{font-weight:800}
+.muted{color:#64748b;font-size:10px;line-height:1.25}
+.scroll{flex:1;min-height:0;overflow:auto;padding:10px 12px;-webkit-overflow-scrolling:touch}
+.card,.stop,.step,.glecbox{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin-bottom:7px}
+.card{margin-bottom:0}
+.controls{padding:8px 10px;border-bottom:1px solid #e2e8f0;background:#f8fafc;flex:0 0 auto}
+.grid{display:grid;gap:7px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.label{font-size:9px;font-weight:800;color:#475569;margin-bottom:3px;display:block}
+input,select{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:6px;background:white;font-size:10px}
+.btn{border:0;border-radius:9px;padding:8px 10px;background:#059669;color:white;font-weight:800;cursor:pointer;font-size:10px}
+.btn.secondary{background:#2563eb}
+.btn.ghost{background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1}
+.btn:hover{filter:brightness(.95)}
+.summary{padding:10px 12px;border-bottom:1px solid #e2e8f0;flex:0 0 auto}
+.summarybox{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:7px}
+.summarybox div,.miniStat,.bigstat div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:7px;text-align:center}
+.summarybox b,.miniStat b,.bigstat b{font-size:14px}
+.stop{margin-bottom:6px}
+.stop b{font-size:11px}
+.del{float:right;border:0;border-radius:7px;background:#fee2e2;color:#991b1b;font-weight:700;cursor:pointer;padding:2px 6px;font-size:9px}
+.smallgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:9px;color:#64748b;margin-top:5px}
+.timeline .step{font-size:10px}
+.resourceCard{border-left:6px solid var(--res-color,#2563eb)}
+.resourceSwatch,.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;background:var(--res-color,#2563eb)}
+.resourceTag,.methodBadge,.pill{font-size:9px;background:#e0f2fe;color:#0369a1;border-radius:999px;padding:2px 6px;margin-left:4px;font-weight:800}
+.warnbox{color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:7px;margin-top:7px;font-size:10px}
+.hint,.floating{display:none!important}
+.legend{position:absolute;bottom:10px;right:10px;z-index:2;background:#fffffff2;border:1px solid #e2e8f0;border-radius:10px;padding:8px;font-size:9px;box-shadow:0 6px 20px #0002}
+.marker{width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px #0005;background:#10b981;cursor:pointer}
+.marker.assigned{width:20px;height:20px;border-width:4px}
+.hub{width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px #0005;background:#111827}
+.maplibregl-popup-content{border-radius:10px;padding:10px;font-size:10px}
+.popup-title{font-weight:800;font-size:12px;margin-bottom:4px}
+.popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:7px 0}
+.popup-grid div{background:#f1f5f9;border-radius:7px;padding:6px}
+.map-error{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#e2e8f0;color:#0f172a;z-index:5;padding:30px;text-align:center}
+.bigstat{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.factorgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.factorgrid input{padding:5px;border-radius:7px;font-size:9px}
+.co2box{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:10px;padding:8px;margin-bottom:8px}
+.co2bars{display:grid;gap:6px;margin-top:7px}
+.barrow{display:grid;grid-template-columns:75px 1fr 55px;gap:5px;align-items:center;font-size:9px}
+.bartrack{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+.barfill{height:100%;border-radius:999px;background:#059669}
+.barfill.baseline{background:#ef4444}
+.co2note,.formula{display:none}
+.parcelTable{width:100%;border-collapse:collapse;margin-top:8px;font-size:9px}
+.parcelTable th,.parcelTable td{border-bottom:1px solid #e2e8f0;padding:4px;text-align:left}
+.parcelTable th{color:#475569;background:#f8fafc}
+.miniGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.bottomSection{min-height:0;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px;background:#f8fafc}
+.bottomControls{display:grid;grid-template-columns:1fr 1fr;gap:7px;align-items:end}
+.compactStops{display:flex;gap:6px;overflow:auto;padding-bottom:4px}
+.compactStops .stop{min-width:170px;margin:0;background:#fff}
+#area-warning{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:3;width:280px}
+#stop-list{display:flex;gap:6px;overflow:auto}
+#stop-list .stop{min-width:150px}
+#timeline{padding-bottom:60px}
+/* GLEC / ISO 14083 workspace */
+.rightpanel .head{padding-bottom:8px}
+.glec-headrow{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.glec-status-pill{font-size:9px;font-weight:800;border-radius:999px;padding:4px 7px;background:#e2e8f0;color:#334155;white-space:nowrap}
+.glec-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:7px 8px;border-bottom:1px solid #e2e8f0;background:#f8fafc;flex:0 0 auto}
+.glec-tab{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:6px 4px;font-size:9px;font-weight:800;cursor:pointer}
+.glec-tab.active{background:#0f766e;color:#fff;border-color:#0f766e}
+.glec-workspace{flex:1;min-height:0;overflow:auto;padding:8px;-webkit-overflow-scrolling:touch;background:#f8fafc}
+.glec-pane{display:none}
+.glec-pane.active{display:block}
+.glec-section{background:#fff;border:1px solid #dbe3ef;border-radius:10px;margin-bottom:8px;overflow:hidden}
+.glec-section>summary{cursor:pointer;list-style:none;padding:8px 9px;font-weight:800;background:#f8fafc;border-bottom:1px solid transparent}
+.glec-section[open]>summary{border-bottom-color:#e2e8f0}
+.glec-section>summary::-webkit-details-marker{display:none}
+.glec-section-body{padding:8px}
+.glec-grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.glec-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.glec-field{display:block;font-size:9px;font-weight:800;color:#475569}
+.glec-field input,.glec-field select,.glec-field textarea{margin-top:3px;width:100%;border:1px solid #cbd5e1;border-radius:7px;padding:6px;background:#fff;font-size:9px;color:#0f172a}
+.glec-field textarea{min-height:54px;resize:vertical;line-height:1.3}
+.glec-check{display:flex;gap:6px;align-items:flex-start;font-size:9px;color:#334155;line-height:1.3;margin:6px 0}
+.glec-check input{width:auto;margin:1px 0 0}
+.glec-actions{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}
+.glec-actions .btn{flex:1;min-width:105px}
+.glec-card{background:#fff;border:1px solid #dbe3ef;border-radius:10px;padding:8px;margin-bottom:8px}
+.glec-card.good{border-color:#86efac;background:#f0fdf4}
+.glec-card.warn{border-color:#fde68a;background:#fffbeb}
+.glec-card.bad{border-color:#fecaca;background:#fff1f2}
+.glec-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}
+.glec-kpi{border:1px solid #e2e8f0;background:#f8fafc;border-radius:8px;padding:7px;text-align:center}
+.glec-kpi span{display:block;color:#64748b;font-size:8px;margin-bottom:2px}
+.glec-kpi b{font-size:14px}
+.glec-table{width:100%;border-collapse:collapse;font-size:8.5px;margin-top:6px}
+.glec-table th,.glec-table td{border-bottom:1px solid #e2e8f0;padding:5px 3px;text-align:right;vertical-align:top}
+.glec-table th:first-child,.glec-table td:first-child{text-align:left}
+.glec-table th{background:#f8fafc;color:#475569;position:sticky;top:0}
+.glec-mini{font-size:8.5px;line-height:1.35;color:#64748b}
+.glec-formula{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:7px;font-size:8px;line-height:1.45;overflow:auto;margin-top:6px}
+.glec-chip{display:inline-block;border-radius:999px;padding:2px 6px;font-size:8px;font-weight:800;background:#e0f2fe;color:#0369a1;margin:1px 2px 1px 0}
+.glec-chip.green{background:#dcfce7;color:#166534}
+.glec-chip.amber{background:#fef3c7;color:#92400e}
+.glec-chip.red{background:#fee2e2;color:#991b1b}
+.glec-bar-row{display:grid;grid-template-columns:78px 1fr 56px;gap:5px;align-items:center;font-size:8.5px;margin:5px 0}
+.glec-bar-track{height:9px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+.glec-bar-fill{height:100%;background:#0f766e;border-radius:999px}
+.glec-bar-fill.baseline{background:#dc2626}
+.glec-report-box{white-space:pre-wrap;background:#fff;border:1px solid #dbe3ef;border-radius:9px;padding:8px;font-size:8.5px;line-height:1.45;color:#334155}
+.glec-source-note{padding:7px;border-left:3px solid #0f766e;background:#f0fdfa;border-radius:6px;font-size:8.5px;color:#475569;line-height:1.35;margin-top:6px}
+.glec-loading{display:flex;gap:7px;align-items:center;padding:10px;background:#fff;border:1px solid #dbe3ef;border-radius:9px}
+.glec-spinner{width:14px;height:14px;border:2px solid #cbd5e1;border-top-color:#0f766e;border-radius:50%;animation:glecspin .7s linear infinite}
+@keyframes glecspin{to{transform:rotate(360deg)}}
+@media(max-width:1300px){.app{grid-template-columns:380px minmax(420px,1fr) 360px}.glec-grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:1100px){html,body{overflow:auto;height:auto}.app{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:auto 55vh auto auto;grid-template-areas:"left" "map" "right" "bottom"}.panel,.rightpanel{height:auto;max-height:none}.scroll{max-height:45vh}.bottom{grid-template-columns:1fr;height:auto}.bottomControls{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel left">
+    <header class="head"><div class="kicker">SMC-Net</div><h1>Operations Overview</h1></header>
+    <section class="summary">
+      <div class="summarybox">
+        <div><span class="muted">Stops</span><br><b id="sum-stops">0</b></div>
+        <div><span class="muted">Parcels</span><br><b id="sum-parcels">0</b></div>
+        <div><span class="muted">Road km</span><br><b id="sum-km">—</b></div>
+        <div><span class="muted">Fleet hrs</span><br><b id="sum-time">—</b></div>
+        <div><span class="muted">CO₂e saved</span><br><b id="sum-co2">—</b></div>
+        <div><span class="muted">Limit</span><br><b>7.5 h</b></div>
+      </div>
+    </section>
+    <main class="scroll"><h2>Resource plan</h2><div id="timeline" class="timeline"><p class="muted">Click delivery locations, then generate routes.</p></div></main>
+  </aside>
+
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div id="area-warning" class="warnbox" style="display:none">Outside Stuttgart target area.</div>
+    <div id="map-error" class="map-error"><div><h2>Map could not load</h2></div></div>
+    <div class="floating"><span id="api-status">HERE API not tested yet.</span></div>
+    <div class="legend"><div><span class="dot" style="background:#111827"></span>Hub</div><div><span class="dot" style="background:#10b981"></span>Stop</div><div><span class="dot" style="background:#2563eb"></span>E-Bike 1</div><div><span class="dot" style="background:#16a34a"></span>E-Bike 2</div><div><span class="dot" style="background:#7c3aed"></span>E-Bike 3</div><div><span class="dot" style="background:#ea580c"></span>E-Van</div></div>
+  </div>
+
+  <aside class="rightpanel">
+    <header class="head">
+      <div class="glec-headrow">
+        <div><div class="kicker">GLEC Framework v3.2 · ISO 14083</div><h1>Logistics emissions model</h1><div class="muted">Road transport + hub · WTT / TTW / WTW · activity and intensity</div></div>
+        <span id="glec-header-status" class="glec-status-pill">Not calculated</span>
+      </div>
+    </header>
+    <nav class="glec-tabs" aria-label="GLEC workspace tabs">
+      <button class="glec-tab active" data-glec-tab="results" onclick="switchGlecTab('results',this)">Results</button>
+      <button class="glec-tab" data-glec-tab="inputs" onclick="switchGlecTab('inputs',this)">Inputs</button>
+      <button class="glec-tab" data-glec-tab="quality" onclick="switchGlecTab('quality',this)">Quality</button>
+      <button class="glec-tab" data-glec-tab="report" onclick="switchGlecTab('report',this)">Report</button>
+    </nav>
+    <div class="glec-workspace">
+      <section id="glec-pane-results" class="glec-pane active">
+        <div id="glec-results"><div class="glec-card"><b>Generate routes to calculate the GLEC model.</b><div class="glec-mini" style="margin-top:4px">The comparison uses an independently routed diesel baseline, energy-based electric vehicle emissions, transport activity in tonne-kilometres, and optional hub emissions.</div></div></div>
+      </section>
+
+      <section id="glec-pane-inputs" class="glec-pane">
+        <details class="glec-section" open>
+          <summary>1. Freight activity and comparison boundary</summary>
+          <div class="glec-section-body">
+            <div class="glec-grid2">
+              <label class="glec-field">Average parcel mass (kg)<input id="glec-parcel-kg" type="number" min="0.01" step="0.1" value="5"></label>
+              <label class="glec-field">Diesel baseline capacity (parcels)<input id="glec-baseline-cap" type="number" min="1" step="1" value="45"></label>
+              <label class="glec-field">Transport activity distance<select id="glec-distance-type"><option value="actual">Actual routed distance</option><option value="sfd">Shortest feasible distance</option></select></label>
+              <label class="glec-field">Baseline hub boundary<select id="glec-baseline-hub"><option value="same">Same hub operations</option><option value="none">No baseline hub</option></select></label>
+            </div>
+            <label class="glec-check"><input id="glec-include-empty" type="checkbox" checked disabled><span>Include return-to-hub and empty kilometres. This is built into every generated route.</span></label>
+            <label class="glec-check"><input id="glec-include-hub" type="checkbox" checked><span>Include consolidation-hub energy and fugitive emissions in the transport-chain result.</span></label>
+          </div>
+        </details>
+
+        <details class="glec-section" open>
+          <summary>2. Vehicle energy activity</summary>
+          <div class="glec-section-body">
+            <div class="glec-grid2">
+              <label class="glec-field">Diesel use (L/100 km)<input id="glec-diesel-l100" type="number" min="0" step="0.1" value="10.0"></label>
+              <label class="glec-field">E-van traction (kWh/km)<input id="glec-evan-kwhkm" type="number" min="0" step="0.001" value="0.230"></label>
+              <label class="glec-field">E-bike traction (kWh/km)<input id="glec-ebike-kwhkm" type="number" min="0" step="0.001" value="0.018"></label>
+              <label class="glec-field">Charging loss (%)<input id="glec-charge-loss" type="number" min="0" max="50" step="0.1" value="10"></label>
+              <label class="glec-field">Vehicle refrigerant loss (kg)<input id="glec-vehicle-ref-kg" type="number" min="0" step="0.001" value="0"></label>
+              <label class="glec-field">Refrigerant GWP (kg CO₂e/kg)<input id="glec-ref-gwp" type="number" min="0" step="1" value="1430"></label>
+            </div>
+          </div>
+        </details>
+
+        <details class="glec-section" open>
+          <summary>3. Energy emission factors</summary>
+          <div class="glec-section-body">
+            <div class="glec-grid2">
+              <label class="glec-field">Diesel TTW (kg CO₂e/L)<input id="glec-diesel-ttw" type="number" min="0" step="0.001" value="2.680"></label>
+              <label class="glec-field">Diesel WTT (kg CO₂e/L)<input id="glec-diesel-wtt" type="number" min="0" step="0.001" value="0.800"></label>
+              <label class="glec-field">Electricity WTT/WTW (kg CO₂e/kWh)<input id="glec-electricity-ef" type="number" min="0" step="0.001" value="0.350"></label>
+              <label class="glec-field">Electricity accounting<select id="glec-electricity-method"><option value="location">Location-based</option><option value="market">Market-based, evidenced</option></select></label>
+            </div>
+            <div class="glec-source-note">The factors are editable project defaults, not a certification. Enter the factor applicable to the reporting year, geography, fuel blend, and electricity purchasing method, and document the source under Quality.</div>
+          </div>
+        </details>
+
+        <details class="glec-section">
+          <summary>4. Hub operation activity</summary>
+          <div class="glec-section-body">
+            <div class="glec-grid2">
+              <label class="glec-field">Hub electricity (kWh/service day)<input id="glec-hub-kwh" type="number" min="0" step="0.1" value="4"></label>
+              <label class="glec-field">Hub diesel (L/service day)<input id="glec-hub-diesel-l" type="number" min="0" step="0.1" value="0"></label>
+              <label class="glec-field">Hub refrigerant loss (kg)<input id="glec-hub-ref-kg" type="number" min="0" step="0.001" value="0"></label>
+              <label class="glec-field">Other direct hub CO₂e (kg)<input id="glec-hub-direct" type="number" min="0" step="0.01" value="0"></label>
+            </div>
+          </div>
+        </details>
+
+        <div class="glec-actions">
+          <button class="btn" onclick="recalculateGlecModel()">Apply and recalculate</button>
+          <button class="btn ghost" onclick="resetGlecDefaults()">Reset defaults</button>
+        </div>
+      </section>
+
+      <section id="glec-pane-quality" class="glec-pane">
+        <details class="glec-section" open>
+          <summary>Data source hierarchy</summary>
+          <div class="glec-section-body">
+            <div class="glec-grid2">
+              <label class="glec-field">Route distance data<select id="glec-q-distance"><option value="primary">Primary / telematics</option><option value="modeled" selected>Modeled routing</option><option value="default">Default estimate</option></select></label>
+              <label class="glec-field">Parcel mass data<select id="glec-q-mass"><option value="primary">Primary measured</option><option value="operator">Operator supplied</option><option value="modeled" selected>Modeled average</option><option value="default">Default value</option></select></label>
+              <label class="glec-field">Energy consumption<select id="glec-q-energy"><option value="primary">Primary metered / fuel records</option><option value="operator">Operator supplied</option><option value="modeled" selected>Modeled vehicle rate</option><option value="default">Default database</option></select></label>
+              <label class="glec-field">Emission factors<select id="glec-q-factors"><option value="primary">Supplier-specific verified</option><option value="official" selected>Official published factor</option><option value="default">GLEC/default database</option><option value="modeled">Other modeled factor</option></select></label>
+            </div>
+          </div>
+        </details>
+        <details class="glec-section" open>
+          <summary>Factor traceability</summary>
+          <div class="glec-section-body">
+            <label class="glec-field">Diesel factor source / version<input id="glec-source-diesel" value="GLEC-aligned project factor; replace with reporting-year fuel factor"></label>
+            <label class="glec-field" style="margin-top:7px">Electricity factor source / year<input id="glec-source-electricity" value="Germany project electricity factor; replace with evidenced reporting-year factor"></label>
+            <label class="glec-field" style="margin-top:7px">Vehicle energy source<input id="glec-source-energy" value="Modeled urban delivery consumption assumptions"></label>
+            <label class="glec-field" style="margin-top:7px">Mass source<input id="glec-source-mass" value="Average parcel mass assumption"></label>
+          </div>
+        </details>
+        <details class="glec-section">
+          <summary>Assurance and deviations</summary>
+          <div class="glec-section-body">
+            <label class="glec-field">Assurance status<select id="glec-assurance"><option value="none">Not assured</option><option value="internal">Internal review</option><option value="limited">External limited assurance</option><option value="reasonable">External reasonable assurance</option></select></label>
+            <label class="glec-field" style="margin-top:7px">Deviations, exclusions, and limitations<textarea id="glec-deviations">Route geometry is modeled. Parcel mass and vehicle energy rates are assumptions unless replaced with primary data. Vehicle manufacture and road infrastructure are outside the operational transport-chain boundary.</textarea></label>
+          </div>
+        </details>
+        <div id="glec-quality-output" class="glec-card"><b>Quality profile</b><div class="glec-mini" style="margin-top:4px">Generate routes to evaluate completeness and traceability.</div></div>
+      </section>
+
+      <section id="glec-pane-report" class="glec-pane">
+        <details class="glec-section" open>
+          <summary>Reporting identification</summary>
+          <div class="glec-section-body">
+            <label class="glec-field">Reporting entity<input id="glec-entity" value="SMC-Net Stuttgart"></label>
+            <div class="glec-grid2" style="margin-top:7px">
+              <label class="glec-field">Period start<input id="glec-period-start" type="date"></label>
+              <label class="glec-field">Period end<input id="glec-period-end" type="date"></label>
+            </div>
+            <label class="glec-field" style="margin-top:7px">Transport / hub service ID<input id="glec-service-id" value="Stuttgart urban parcel delivery service"></label>
+            <label class="glec-field" style="margin-top:7px">Boundary description<textarea id="glec-boundary">Hub-to-recipient urban road transport, including loaded and empty return kilometres, purchased traction electricity, diesel baseline fuel, charging losses, and selected hub energy and fugitive emissions.</textarea></label>
+          </div>
+        </details>
+        <div class="glec-actions">
+          <button class="btn secondary" onclick="exportGlecJson()">Export JSON</button>
+          <button class="btn ghost" onclick="exportGlecCsv()">Export CSV</button>
+        </div>
+        <div id="glec-report-output" class="glec-report-box">Generate routes to create the GLEC reporting summary.</div>
+      </section>
+    </div>
+  </aside>
+
+  <section class="bottom">
+    <div class="bottomSection">
+      <h2>Planner</h2>
+      <div class="bottomControls">
+        <label class="label">Start<input id="start-time" type="time" value="08:30"></label>
+        <label class="label">E-bike cap<input id="bike-capacity" type="number" min="1" value="12"></label>
+        <label class="label">E-van cap<input id="van-capacity" type="number" min="1" value="45"></label>
+        <button class="btn" onclick="planRoutes()">Generate</button>
+        <button class="btn secondary" onclick="testHereApi()">Test HERE</button>
+        <button class="btn ghost" onclick="clearStops()">Clear stops</button>
+      </div>
+    </div>
+    <div class="bottomSection"><h2>Delivery stops</h2><div id="stop-list"><p class="muted">Click map to add stops.</p></div></div>
+  </section>
+</div>
+<script>
+
+const HUB={id:'hub',name:'SMC-Net Consolidation Hub',lat:48.7756,lng:9.1783};
+const TARGET=[[9.092,48.844],[9.160,48.870],[9.245,48.858],[9.302,48.817],[9.318,48.754],[9.262,48.696],[9.170,48.684],[9.074,48.714],[9.045,48.775],[9.092,48.844]];
+let stops=[], markers={}, routeIds=[];
+const RESOURCE_COLORS={
+  1:'#2563eb',  // Motor E-Bike 1 blue
+  2:'#16a34a',  // Motor E-Bike 2 green
+  3:'#7c3aed',  // Motor E-Bike 3 purple
+  4:'#ea580c'   // E-Van 1 orange
+};
+const RESOURCE_LABELS={1:'Motor E-Bike 1',2:'Motor E-Bike 2',3:'Motor E-Bike 3',4:'E-Van 1'};
+// HERE API key is NOT stored in this file. It is asked once and kept in this browser only.
+function getHereKey(){
+  let k='';
+  try{k=localStorage.getItem('here_api_key')||''}catch(_){}
+  if(!k){
+    k=(window.prompt('Enter HERE API key (stored only in this browser):')||'').trim();
+    if(k){try{localStorage.setItem('here_api_key',k)}catch(_){}}
+  }
+  if(!k)throw new Error('HERE API key missing');
+  return k;
+}
+const DAILY_LIMIT_HOURS=7.5;
+const SERVICE_MIN_PER_STOP=7.5;
+const MOTOR_EBIKE_SPEED_KMH=15;
+const EVAN_EST_SPEED_KMH=28;
+let lastPlanGenerated=false;
+const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[9.1783,48.7756],zoom:12,minZoom:9,maxZoom:18,pitch:0,attributionControl:true});
+map.addControl(new maplibregl.NavigationControl({visualizePitch:false}),'top-left');
+map.addControl(new maplibregl.ScaleControl({maxWidth:160,unit:'metric'}),'bottom-left');
+map.on('error',()=>{setTimeout(()=>{if(!map.loaded())document.getElementById('map-error').style.display='flex'},3500)});
+map.on('load',()=>{
+  map.addSource('target',{type:'geojson',data:{type:'Feature',geometry:{type:'Polygon',coordinates:[TARGET]},properties:{}}});
+  map.addLayer({id:'target-fill',type:'fill',source:'target',paint:{'fill-color':'#fbbf24','fill-opacity':0.13}});
+  map.addLayer({id:'target-line',type:'line',source:'target',paint:{'line-color':'#f59e0b','line-width':3,'line-dasharray':[2,2]}});
+  addHubMarker();
+  map.resize();
+});
+function addHubMarker(){const el=document.createElement('div');el.className='hub';new maplibregl.Marker({element:el}).setLngLat([HUB.lng,HUB.lat]).setPopup(new maplibregl.Popup().setHTML('<b>SMC-Net Consolidation Hub</b><br>Stuttgart Mitte')).addTo(map)}
+function isInsideTarget(lng,lat){let inside=false;for(let i=0,j=TARGET.length-1;i<TARGET.length;j=i++){const xi=TARGET[i][0],yi=TARGET[i][1],xj=TARGET[j][0],yj=TARGET[j][1];const intersect=((yi>lat)!=(yj>lat))&&(lng<(xj-xi)*(lat-yi)/(yj-yi)+xi);if(intersect)inside=!inside}return inside}
+function flashAreaWarning(){const w=document.getElementById('area-warning');w.style.display='block';setTimeout(()=>w.style.display='none',3500)}
+function havKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180,la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180;const x=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function estRoadKm(a,b){return havKm(a,b)*1.45}
+function bearingName(a,b){const dy=b.lat-a.lat,dx=b.lng-a.lng;if(Math.abs(dy)>Math.abs(dx)*1.5)return dy>0?'N':'S';if(Math.abs(dx)>Math.abs(dy)*1.5)return dx>0?'E':'W';return (dy>0?'N':'S')+(dx>0?'E':'W')}
+function popupHtml(p){return `<div><div class="popup-title">${p.name}</div><div class="muted">Delivery location</div><div class="popup-grid"><div><span class="muted">Coordinates</span><br><b>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</b></div><div><span class="muted">Direction</span><br><b>${bearingName(HUB,p)}</b></div><div><span class="muted">Road estimate</span><br><b>${estRoadKm(HUB,p).toFixed(1)} km</b></div><div><span class="muted">Parcels</span><br><b>${p.parcels}</b></div></div></div>`}
+map.on('click',e=>{if(!isInsideTarget(e.lngLat.lng,e.lngLat.lat)){flashAreaWarning();return}const n=stops.length+1;const p={id:'stop-'+Date.now(),name:'Delivery Stop '+n,lat:e.lngLat.lat,lng:e.lngLat.lng,parcels:1};stops.push(p);addStopMarker(p);renderStops();updateSummary();});
+function addStopMarker(p){const el=document.createElement('div');el.className='marker';const marker=new maplibregl.Marker({element:el,draggable:true}).setLngLat([p.lng,p.lat]).setPopup(new maplibregl.Popup().setHTML(popupHtml(p))).addTo(map);marker.on('dragend',()=>{const ll=marker.getLngLat();if(!isInsideTarget(ll.lng,ll.lat)){marker.setLngLat([p.lng,p.lat]);flashAreaWarning();return}p.lng=ll.lng;p.lat=ll.lat;marker.setPopup(new maplibregl.Popup().setHTML(popupHtml(p)));renderStops();clearRoutes()});markers[p.id]=marker;marker.togglePopup()}
+function renderStops(){const box=document.getElementById('stop-list');if(!stops.length){box.innerHTML='<p class="muted">No delivery stops yet. Click the map to add stops.</p>';return}box.innerHTML=stops.map((p,i)=>{const assigned=p.assignedResource?`<span style="color:${p.assignedColor};font-weight:800">${p.assignedResource}</span>`:'<span class="muted">Not planned</span>';return `<div class="stop"><button class="del" onclick="removeStop('${p.id}')">×</button><b>${i+1}. Stop</b><div class="smallgrid"><span>Parcels</span><span>${assigned}</span></div><label class="label" style="margin-top:6px">Parcels<input type="number" min="1" value="${p.parcels}" onchange="updateParcels('${p.id}',this.value)"></label></div>`}).join('')}
+function focusStop(id){const p=stops.find(x=>x.id===id);if(!p)return;map.flyTo({center:[p.lng,p.lat],zoom:15});markers[id].togglePopup()}
+function updateParcels(id,v){const p=stops.find(x=>x.id===id);if(p){p.parcels=Math.max(1,Number(v)||1);markers[id].setPopup(new maplibregl.Popup().setHTML(popupHtml(p)));updateSummary();clearRoutes()}}
+function removeStop(id){if(markers[id]){markers[id].remove();delete markers[id]}stops=stops.filter(x=>x.id!==id);renderStops();updateSummary();clearRoutes()}
+function clearStops(){lastPlanGenerated=false;Object.values(markers).forEach(m=>m.remove());stops=[];markers={};clearRoutes();renderStops();updateSummary();document.getElementById('timeline').innerHTML='<p class="muted">Add delivery stops, then generate clustered routes. Each resource deadline is 7.5 hours.</p>'}
+function clearRoutes(){routeIds.forEach(id=>{if(map.getLayer(id))map.removeLayer(id);if(map.getSource(id))map.removeSource(id)});routeIds=[];resetStopMarkerColors();document.getElementById('sum-km').textContent='—';document.getElementById('sum-time').textContent='—';document.getElementById('sum-co2').textContent='—';updateGlecPanelEmpty()}
+function updateSummary(){document.getElementById('sum-stops').textContent=stops.length;document.getElementById('sum-parcels').textContent=stops.reduce((s,p)=>s+p.parcels,0)}
+function resetStopMarkerColors(){stops.forEach(p=>{if(markers[p.id]){const el=markers[p.id].getElement();el.style.background='#10b981';el.classList.remove('assigned');el.title='Unassigned delivery stop';}})}
+function colorStopMarkers(routes){resetStopMarkerColors();routes.forEach(r=>{const color=RESOURCE_COLORS[r.id]||'#2563eb';r.stops.forEach(p=>{p.assignedResource=r.name.replace('Motor ', '').replace(' 1',' 1');p.assignedColor=color;if(markers[p.id]){const el=markers[p.id].getElement();el.style.background=color;el.classList.add('assigned');el.title=r.name;}})});renderStops()}
+function clusterPolygonGeo(stops){
+  if(!stops||!stops.length)return null;
+  const pts=stops.map(p=>[p.lng,p.lat]);
+  if(pts.length===1){const [lng,lat]=pts[0],d=0.0035;return {type:'Polygon',coordinates:[[[lng-d,lat-d],[lng+d,lat-d],[lng+d,lat+d],[lng-d,lat+d],[lng-d,lat-d]]]};}
+  const sorted=[...pts].sort((a,b)=>a[0]===b[0]?a[1]-b[1]:a[0]-b[0]);
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lower=[];for(const pt of sorted){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],pt)<=0)lower.pop();lower.push(pt)}
+  const upper=[];for(const pt of sorted.slice().reverse()){while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],pt)<=0)upper.pop();upper.push(pt)}
+  let hull=lower.slice(0,-1).concat(upper.slice(0,-1));
+  if(hull.length<3){const c=centroidOf(stops),d=0.004;hull=[[c.lng-d,c.lat-d],[c.lng+d,c.lat-d],[c.lng+d,c.lat+d],[c.lng-d,c.lat+d]]}
+  hull.push(hull[0]);return {type:'Polygon',coordinates:[hull]};
+}
+function addClusterArea(r){const geo=clusterPolygonGeo(r.stops);if(!geo)return;const fillId='cluster-fill-'+r.id+'-'+Date.now();const lineId='cluster-line-'+r.id+'-'+Date.now();routeIds.push(fillId,lineId);const color=RESOURCE_COLORS[r.id]||'#2563eb';map.addSource(fillId,{type:'geojson',data:{type:'Feature',geometry:geo,properties:{name:r.name}}});map.addLayer({id:fillId,type:'fill',source:fillId,paint:{'fill-color':color,'fill-opacity':0.13}});map.addLayer({id:lineId,type:'line',source:fillId,paint:{'line-color':color,'line-width':2,'line-dasharray':[2,2],'line-opacity':0.9}});}
+const FLEET=[
+  {id:1,name:'Motor E-Bike 1',vehicle:'motor-e-bike',kind:'bike'},
+  {id:2,name:'Motor E-Bike 2',vehicle:'motor-e-bike',kind:'bike'},
+  {id:3,name:'Motor E-Bike 3',vehicle:'motor-e-bike',kind:'bike'},
+  {id:4,name:'E-Van 1',vehicle:'e-van',kind:'van'}
+];
+function nearestOrder(list){let cur=HUB,remaining=[...list],order=[];while(remaining.length){remaining.sort((a,b)=>estRoadKm(cur,a)-estRoadKm(cur,b));const n=remaining.shift();order.push(n);cur=n}return order}
+function centroidOf(list){const n=Math.max(1,list.length);return {lat:list.reduce((s,p)=>s+p.lat,0)/n,lng:list.reduce((s,p)=>s+p.lng,0)/n}}
+function clusterStops(k=4){
+  const activeK=Math.min(k,stops.length);
+  if(activeK===0)return [];
+  const ordered=[...stops].sort((a,b)=>Math.atan2(a.lat-HUB.lat,a.lng-HUB.lng)-Math.atan2(b.lat-HUB.lat,b.lng-HUB.lng));
+  let centers=[];
+  for(let i=0;i<activeK;i++){centers.push({...ordered[Math.floor(i*ordered.length/activeK)]})}
+  let clusters=[];
+  for(let iter=0;iter<10;iter++){
+    clusters=Array.from({length:activeK},()=>[]);
+    stops.forEach(p=>{
+      let best=0,bestD=Infinity;
+      centers.forEach((c,i)=>{const d=havKm(c,p);if(d<bestD){bestD=d;best=i}});
+      clusters[best].push(p);
+    });
+    centers=clusters.map((c,i)=>c.length?centroidOf(c):centers[i]);
+  }
+  return clusters.filter(c=>c.length).map(c=>({stops:nearestOrder(c),centroid:centroidOf(c),parcels:c.reduce((s,p)=>s+p.parcels,0)}));
+}
+function estimateRouteHours(list,vehicle){
+  if(!list.length)return 0;
+  const speed=vehicle==='motor-e-bike'?MOTOR_EBIKE_SPEED_KMH:EVAN_EST_SPEED_KMH;
+  const ordered=nearestOrder(list);
+  const pts=[HUB,...ordered,HUB];
+  let km=0;
+  for(let i=0;i<pts.length-1;i++)km+=estRoadKm(pts[i],pts[i+1]);
+  return km/speed + (ordered.length*SERVICE_MIN_PER_STOP/60);
+}
+function recomputeResource(r){
+  r.stops=nearestOrder(r.stops);
+  r.parcels=r.stops.reduce((s,p)=>s+p.parcels,0);
+  r.centroid=r.stops.length?centroidOf(r.stops):null;
+  r.estHours=estimateRouteHours(r.stops,r.vehicle);
+}
+function allocateStops(){
+  const bikeCap=Number(document.getElementById('bike-capacity').value)||12;
+  const vanCap=Number(document.getElementById('van-capacity').value)||45;
+  const clusterCount=Math.min(4,stops.length);
+  const clusters=clusterStops(clusterCount);
+  const routes=FLEET.map(r=>({...r,stops:[],parcels:0,capacity:r.kind==='van'?vanCap:bikeCap,centroid:null,estHours:0}));
+  if(!clusters.length)return routes;
+  clusters.forEach(c=>{c.estVanHours=estimateRouteHours(c.stops,'e-van');c.estBikeHours=estimateRouteHours(c.stops,'motor-e-bike')});
+  clusters.sort((a,b)=>b.parcels-a.parcels || b.estBikeHours-a.estBikeHours);
+
+  const van=routes.find(r=>r.kind==='van');
+  const bikes=routes.filter(r=>r.kind==='bike');
+
+  if(clusters[0]){van.stops=[...clusters[0].stops];recomputeResource(van)}
+  clusters.slice(1,4).forEach((cluster,i)=>{bikes[i].stops=[...cluster.stops];recomputeResource(bikes[i])});
+
+  clusters.slice(4).forEach(cluster=>{
+    const candidates=[van,...bikes].sort((a,b)=>{
+      const ah=estimateRouteHours([...a.stops,...cluster.stops],a.vehicle);
+      const bh=estimateRouteHours([...b.stops,...cluster.stops],b.vehicle);
+      const aCap=a.parcels+cluster.parcels<=a.capacity?0:100;
+      const bCap=b.parcels+cluster.parcels<=b.capacity?0:100;
+      const aTime=ah<=DAILY_LIMIT_HOURS?0:100;
+      const bTime=bh<=DAILY_LIMIT_HOURS?0:100;
+      const aPref=a.kind==='van'?-0.15:0;
+      const bPref=b.kind==='van'?-0.15:0;
+      return (aCap+aTime+ah+aPref)-(bCap+bTime+bh+bPref);
+    });
+    const target=candidates[0];
+    target.stops.push(...cluster.stops);
+    recomputeResource(target);
+  });
+
+  routes.forEach(recomputeResource);
+  return routes;
+}
+function decodeHerePolyline(encoded){
+  const DECODING_TABLE=[62,-1,-1,52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63,-1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51];
+  let index=0;
+  function decodeUnsigned(){let result=0,shift=0,b;do{b=DECODING_TABLE[encoded.charCodeAt(index++)-45];result|=(b&0x1f)<<shift;shift+=5}while(b>=0x20);return result}
+  function decodeSigned(){const value=decodeUnsigned();return (value&1)?~(value>>1):(value>>1)}
+  decodeUnsigned(); // version
+  const header=decodeUnsigned();
+  const precision=header&15;
+  const thirdDim=(header>>4)&7;
+  const thirdDimPrecision=(header>>7)&15;
+  const factor=Math.pow(10,precision);
+  const thirdFactor=Math.pow(10,thirdDimPrecision);
+  let lat=0,lng=0,z=0,coords=[];
+  while(index<encoded.length){
+    lat+=decodeSigned();lng+=decodeSigned();
+    if(thirdDim){z+=decodeSigned();void(z/thirdFactor)}
+    coords.push([lng/factor,lat/factor]);
+  }
+  return {type:'LineString',coordinates:coords};
+}
+
+function getSelectedDepartureTime(){
+  const input=document.getElementById('start-time');
+  const val=(input&&input.value)?input.value:'08:30';
+  const [hh,mm]=val.split(':').map(Number);
+  const d=new Date();
+  d.setHours(Number.isFinite(hh)?hh:8,Number.isFinite(mm)?mm:30,0,0);
+  if(d.getTime()<Date.now()-60000)d.setDate(d.getDate()+1);
+  return d;
+}
+function departureParam(vehicle){
+  const iso=getSelectedDepartureTime().toISOString();
+  return vehicle==='e-van'?`&departureTime=${encodeURIComponent(iso)}`:'';
+}
+function selectedStartLabel(){
+  return document.getElementById('start-time')?.value || '08:30';
+}
+async function rerunAfterTimeChange(){
+  if(!lastPlanGenerated || !stops.length){
+    clearRoutes();
+    document.getElementById('timeline').innerHTML='<p class="muted">Start time changed. Generate routes to calculate the delivery scenario.</p>';
+    return;
+  }
+  await planRoutes();
+}
+
+async function getHereLeg(a,b,vehicle){
+  const mode=vehicle==='motor-e-bike'?'bicycle':'car';
+  const origin=`${a.lat},${a.lng}`;
+  const destination=`${b.lat},${b.lng}`;
+  const avoid=vehicle==='motor-e-bike'?'&avoid[features]=controlledAccessHighway':'';
+  const dep=departureParam(vehicle);
+  const url=`https://router.hereapi.com/v8/routes?transportMode=${mode}&routingMode=fast&origin=${origin}&destination=${destination}&return=summary,polyline${avoid}${dep}&apikey=${getHereKey()}`;
+  const r=await fetch(url);
+  const txt=await r.text();
+  let j={};
+  try{j=JSON.parse(txt)}catch(_){j={raw:txt}}
+  if(!r.ok){
+    const msg=j.title||j.error||j.cause||txt||('HTTP '+r.status);
+    throw new Error(`HERE ${mode} failed: ${r.status} ${msg}`);
+  }
+  if(!j.routes||!j.routes.length)throw new Error(`HERE ${mode}: no route returned`);
+  let coords=[],distance=0,duration=0;
+  j.routes[0].sections.forEach(sec=>{
+    if(sec.summary){distance+=sec.summary.length||0;duration+=sec.summary.duration||0}
+    if(sec.polyline){const line=decodeHerePolyline(sec.polyline);coords.push(...line.coordinates)}
+  });
+  if(coords.length<2)throw new Error(`HERE ${mode}: route returned but polyline could not be decoded`);
+  return {coords,distance,duration,mode};
+}
+async function getHereRoute(points,vehicle){
+  let coords=[],distance=0,duration=0,mode=vehicle==='motor-e-bike'?'bicycle':'car',legKm=[];
+  for(let i=0;i<points.length-1;i++){
+    const leg=await getHereLeg(points[i],points[i+1],vehicle);
+    distance+=leg.distance; duration+=leg.duration; mode=leg.mode; legKm.push((leg.distance||0)/1000);
+    if(i===0) coords.push(...leg.coords); else coords.push(...leg.coords.slice(1));
+  }
+  const km=distance/1000;
+  if(vehicle==='motor-e-bike')return {geo:{type:'LineString',coordinates:coords},km,mins:(km/MOTOR_EBIKE_SPEED_KMH)*60,source:'HERE bicycle geometry + 15 km/h motor e-bike model',legKm};
+  return {geo:{type:'LineString',coordinates:coords},km,mins:duration/60,source:'HERE '+mode,legKm};
+}
+async function testHereApi(){
+  const box=document.getElementById('api-status');
+  const timeline=document.getElementById('timeline');
+  box.textContent='Testing HERE API...';
+  timeline.innerHTML='<p class="muted">Testing HERE API using a short Stuttgart Mitte route...</p>';
+  try{
+    const car=await getHereLeg(HUB,{lat:48.7810,lng:9.1860},'e-van');
+    let bikeMsg='';
+    try{const bike=await getHereLeg(HUB,{lat:48.7810,lng:9.1860},'motor-e-bike');bikeMsg=` Motor e-bike geometry OK: ${(bike.distance/1000).toFixed(1)} km, time model uses 15 km/h.`}
+    catch(be){bikeMsg=` Motor e-bike geometry test failed: ${be.message}.`}
+    box.textContent='HERE API working for e-van/car.';
+    timeline.innerHTML=`<div class="step"><b>HERE API test result</b><br><span class="muted">E-van/car route OK: ${(car.distance/1000).toFixed(1)} km, about ${Math.round(car.duration/60)} min.${bikeMsg}</span></div>`;
+  }catch(e){
+    box.textContent='HERE API failed. See left panel.';
+    timeline.innerHTML=`<div class="step" style="border-color:#fecaca;background:#fff1f2"><b>HERE API test failed</b><br><span class="muted">${e.message}</span><br><br><span class="muted">Likely causes: the key is not active for Routing API v8, the key has HTTP referrer restrictions that block local HTML files, or the browser/network blocked the request.</span></div>`;
+  }
+}
+async function getOsrmRoute(points,vehicle){
+  const profile='driving';
+  const coords=points.map(p=>`${p.lng},${p.lat}`).join(';');
+  const url=`https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=false`;
+  const r=await fetch(url);if(!r.ok)throw new Error('OSRM failed: HTTP '+r.status);
+  const j=await r.json();if(!j.routes||!j.routes.length)throw new Error('No OSRM route');
+  const route=j.routes[0],km=route.distance/1000,legKm=(route.legs||[]).map(l=>(l.distance||0)/1000);
+  if(vehicle==='motor-e-bike')return {geo:route.geometry,km,mins:(km/MOTOR_EBIKE_SPEED_KMH)*60,source:'OSRM road geometry + 15 km/h motor e-bike fallback',legKm};
+  return {geo:route.geometry,km,mins:route.duration/60,source:'OSRM road fallback',legKm};
+}
+function fallbackLine(points){return {type:'LineString',coordinates:points.map(p=>[p.lng,p.lat])}}
+function hoursLabel(minutes){return (minutes/60).toFixed(2)+' h'}
+function deadlineNotice(minutes){
+  const h=minutes/60;
+  if(h>DAILY_LIMIT_HOURS)return `<div class="warnbox"><b>Not feasible today:</b> this resource needs ${h.toFixed(2)} h, which exceeds the ${DAILY_LIMIT_HOURS} h deadline. Re-cluster, reduce stops, add another resource, or move part of this cluster to the next day.</div>`;
+  if(h>7.0)return `<div class="warnbox"><b>Near deadline:</b> ${h.toFixed(2)} h used out of ${DAILY_LIMIT_HOURS} h.</div>`;
+  return '';
+}
+
+let lastRouteRecords=[];
+let lastGlecReport=null;
+
+function nval(id,fallback=0){const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)?v:fallback}
+function sval(id,fallback=''){return (document.getElementById(id)?.value??fallback).trim()}
+function checked(id,fallback=false){const el=document.getElementById(id);return el?el.checked:fallback}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function signed(v,d=2){return `${v>=0?'+':''}${v.toFixed(d)}`}
+function pct(v){return Number.isFinite(v)?v.toFixed(1)+'%':'—'}
+
+function switchGlecTab(name,button){
+  document.querySelectorAll('.glec-pane').forEach(p=>p.classList.toggle('active',p.id===`glec-pane-${name}`));
+  document.querySelectorAll('.glec-tab').forEach(b=>b.classList.toggle('active',b===button||b.dataset.glecTab===name));
+}
+
+function getGlecInputs(){
+  return {
+    parcelKg:Math.max(0.001,nval('glec-parcel-kg',5)),baselineCap:Math.max(1,Math.round(nval('glec-baseline-cap',45))),
+    distanceType:sval('glec-distance-type','actual'),baselineHub:sval('glec-baseline-hub','same'),includeHub:checked('glec-include-hub',true),
+    dieselL100:Math.max(0,nval('glec-diesel-l100',10)),evanKwhKm:Math.max(0,nval('glec-evan-kwhkm',0.23)),ebikeKwhKm:Math.max(0,nval('glec-ebike-kwhkm',0.018)),chargeLossPct:Math.min(50,Math.max(0,nval('glec-charge-loss',10))),
+    vehicleRefKg:Math.max(0,nval('glec-vehicle-ref-kg',0)),refGwp:Math.max(0,nval('glec-ref-gwp',1430)),
+    dieselTtw:Math.max(0,nval('glec-diesel-ttw',2.68)),dieselWtt:Math.max(0,nval('glec-diesel-wtt',0.8)),electricityEf:Math.max(0,nval('glec-electricity-ef',0.35)),electricityMethod:sval('glec-electricity-method','location'),
+    hubKwh:Math.max(0,nval('glec-hub-kwh',4)),hubDieselL:Math.max(0,nval('glec-hub-diesel-l',0)),hubRefKg:Math.max(0,nval('glec-hub-ref-kg',0)),hubDirect:Math.max(0,nval('glec-hub-direct',0)),
+    qDistance:sval('glec-q-distance','modeled'),qMass:sval('glec-q-mass','modeled'),qEnergy:sval('glec-q-energy','modeled'),qFactors:sval('glec-q-factors','official'),
+    sourceDiesel:sval('glec-source-diesel'),sourceElectricity:sval('glec-source-electricity'),sourceEnergy:sval('glec-source-energy'),sourceMass:sval('glec-source-mass'),assurance:sval('glec-assurance','none'),deviations:sval('glec-deviations'),
+    entity:sval('glec-entity','SMC-Net Stuttgart'),periodStart:sval('glec-period-start'),periodEnd:sval('glec-period-end'),serviceId:sval('glec-service-id'),boundary:sval('glec-boundary')
+  };
+}
+
+function fallbackLegKm(points){const legs=[];for(let i=0;i<points.length-1;i++)legs.push(estRoadKm(points[i],points[i+1]));return legs}
+async function routeWithFallback(points,vehicle){
+  const speed=vehicle==='motor-e-bike'?MOTOR_EBIKE_SPEED_KMH:EVAN_EST_SPEED_KMH;
+  try{return await getHereRoute(points,vehicle)}
+  catch(e1){
+    try{return await getOsrmRoute(points,vehicle)}
+    catch(e2){
+      const legKm=fallbackLegKm(points),km=legKm.reduce((a,b)=>a+b,0);
+      console.warn('HERE error:',e1,'OSRM error:',e2);
+      return {geo:fallbackLine(points),km,mins:km/speed*60,source:'estimated road-distance fallback',legKm};
+    }
+  }
+}
+
+function buildBaselineTrips(inputStops,capacity){
+  const ordered=nearestOrder(inputStops).map(s=>({...s}));
+  const trips=[];let trip=[],load=0;
+  for(const s of ordered){
+    let remaining=Math.max(0,Number(s.parcels)||0);
+    while(remaining>0){
+      if(load>=capacity){trips.push(trip);trip=[];load=0}
+      const take=Math.min(remaining,capacity-load);
+      trip.push({...s,parcels:take,name:s.name+(take<(Number(s.parcels)||0)?' (split)':'')});
+      load+=take;remaining-=take;
+      if(load>=capacity){trips.push(trip);trip=[];load=0}
+    }
+  }
+  if(trip.length)trips.push(trip);
+  return trips;
+}
+
+function transportActivityTkm(routeStops,legKm,parcelKg){
+  let remainingKg=routeStops.reduce((s,p)=>s+(Number(p.parcels)||0)*parcelKg,0),tkm=0;
+  for(let i=0;i<routeStops.length;i++){
+    tkm+=(remainingKg/1000)*(Number(legKm[i])||0);
+    remainingKg=Math.max(0,remainingKg-(Number(routeStops[i].parcels)||0)*parcelKg);
+  }
+  return tkm;
+}
+
+async function calculateBaselineScenario(inputs){
+  const trips=buildBaselineTrips(stops,inputs.baselineCap);
+  let km=0,tkm=0,mins=0,sources=[];const tripRows=[];
+  for(let i=0;i<trips.length;i++){
+    const trip=trips[i],points=[HUB,...trip,HUB],routed=await routeWithFallback(points,'e-van');
+    const legs=routed.legKm?.length===points.length-1?routed.legKm:fallbackLegKm(points);
+    const tripTkm=transportActivityTkm(trip,legs,inputs.parcelKg);
+    km+=routed.km;mins+=routed.mins+trip.length*SERVICE_MIN_PER_STOP;tkm+=tripTkm;sources.push(routed.source);
+    tripRows.push({trip:i+1,km:routed.km,tkm:tripTkm,parcels:trip.reduce((s,p)=>s+p.parcels,0),stops:trip.length,source:routed.source});
+  }
+  return {trips:tripRows,tripCount:tripRows.length,km,tkm,mins,sources:[...new Set(sources)],fuelL:km*inputs.dieselL100/100};
+}
+
+function evaluateGlecQuality(inputs,routeRecords,baseline){
+  const gaps=[];
+  if(!inputs.sourceDiesel)gaps.push('Diesel factor source is missing');
+  if(!inputs.sourceElectricity)gaps.push('Electricity factor source is missing');
+  if(!inputs.sourceEnergy)gaps.push('Vehicle energy source is missing');
+  if(!inputs.sourceMass)gaps.push('Freight mass source is missing');
+  if(!inputs.periodStart||!inputs.periodEnd)gaps.push('Reporting period is incomplete');
+  if(!inputs.entity)gaps.push('Reporting entity is missing');
+  if(!inputs.serviceId)gaps.push('Transport service identification is missing');
+  if(!inputs.boundary)gaps.push('Boundary description is missing');
+  if(!routeRecords.length)gaps.push('No transport operation has been calculated');
+  if(inputs.parcelKg<=0)gaps.push('Freight mass must be greater than zero');
+  if(!baseline.tripCount)gaps.push('Diesel comparison baseline is missing');
+  const modeled=[inputs.qDistance,inputs.qMass,inputs.qEnergy,inputs.qFactors].filter(x=>x==='modeled'||x==='default').length;
+  const status=gaps.length?'Incomplete for verification':modeled>=3?'Calculation complete · modeled data':'Calculation complete · higher-quality data';
+  return {gaps,modeled,status};
+}
+
+async function calculateGlecModel(routeRecords){
+  const inputs=getGlecInputs();
+  const baseline=await calculateBaselineScenario(inputs);
+  const loss=Math.min(0.5,Math.max(0,inputs.chargeLossPct/100)),gridMultiplier=1/(1-loss||1);
+  let ebikeKm=0,evanKm=0,currentTkm=0;
+  const routeActivity=[];
+  routeRecords.forEach(r=>{
+    const legs=r.legKm?.length===r.stops.length+1?r.legKm:fallbackLegKm([HUB,...r.stops,HUB]);
+    const tkm=transportActivityTkm(r.stops,legs,inputs.parcelKg);
+    currentTkm+=tkm;
+    if(r.kind==='van')evanKm+=r.km;else ebikeKm+=r.km;
+    routeActivity.push({name:r.name,kind:r.kind,km:r.km,tkm,parcels:r.stops.reduce((s,p)=>s+p.parcels,0),source:r.source});
+  });
+  const currentKm=ebikeKm+evanKm,totalParcels=stops.reduce((s,p)=>s+p.parcels,0),massT=totalParcels*inputs.parcelKg/1000;
+  const evanBatteryKwh=evanKm*inputs.evanKwhKm,ebikeBatteryKwh=ebikeKm*inputs.ebikeKwhKm;
+  const evanGridKwh=evanBatteryKwh*gridMultiplier,ebikeGridKwh=ebikeBatteryKwh*gridMultiplier;
+  const transportWtt=(evanGridKwh+ebikeGridKwh)*inputs.electricityEf;
+  const transportTtw=inputs.vehicleRefKg*inputs.refGwp;
+  const hubWtt=inputs.includeHub?(inputs.hubKwh*inputs.electricityEf+inputs.hubDieselL*inputs.dieselWtt):0;
+  const hubTtw=inputs.includeHub?(inputs.hubDieselL*inputs.dieselTtw+inputs.hubRefKg*inputs.refGwp+inputs.hubDirect):0;
+  const current={km:currentKm,tkm:currentTkm,wtt:transportWtt+hubWtt,ttw:transportTtw+hubTtw,transportWtt,transportTtw,hubWtt,hubTtw,evanKm,ebikeKm,evanBatteryKwh,ebikeBatteryKwh,evanGridKwh,ebikeGridKwh,hubKwh:inputs.includeHub?inputs.hubKwh:0};
+  current.wtw=current.wtt+current.ttw;current.intensity=currentTkm>0?current.wtw/currentTkm:0;current.perParcel=totalParcels?current.wtw/totalParcels:0;
+  const baselineHubWtt=inputs.includeHub&&inputs.baselineHub==='same'?hubWtt:0,baselineHubTtw=inputs.includeHub&&inputs.baselineHub==='same'?hubTtw:0;
+  const base={...baseline,wtt:baseline.fuelL*inputs.dieselWtt+baselineHubWtt,ttw:baseline.fuelL*inputs.dieselTtw+baselineHubTtw,transportWtt:baseline.fuelL*inputs.dieselWtt,transportTtw:baseline.fuelL*inputs.dieselTtw,hubWtt:baselineHubWtt,hubTtw:baselineHubTtw};
+  base.wtw=base.wtt+base.ttw;base.intensity=base.tkm>0?base.wtw/base.tkm:0;base.perParcel=totalParcels?base.wtw/totalParcels:0;
+  const difference=base.wtw-current.wtw,reductionPct=base.wtw?difference/base.wtw*100:0;
+  const quality=evaluateGlecQuality(inputs,routeRecords,base);
+  return {framework:'GLEC Framework v3.2 / ISO 14083 aligned project model',generatedAt:new Date().toISOString(),inputs,current,baseline:base,difference,reductionPct,totalParcels,massT,routeActivity,quality};
+}
+
+function glecBar(label,value,max,baseline=false){const w=max>0?Math.max(2,Math.min(100,value/max*100)):0;return `<div class="glec-bar-row"><b>${esc(label)}</b><div class="glec-bar-track"><div class="glec-bar-fill ${baseline?'baseline':''}" style="width:${w}%"></div></div><b>${value.toFixed(2)} kg</b></div>`}
+function sourceChip(v){const cls=v==='primary'?'green':v==='default'?'red':'amber';return `<span class="glec-chip ${cls}">${esc(v)}</span>`}
+
+function renderGlecReport(report){
+  const r=report,i=r.inputs,q=r.quality;
+  const statusClass=q.gaps.length?'bad':q.modeled>=3?'warn':'good';
+  const max=Math.max(r.current.wtw,r.baseline.wtw,0.001),direction=r.difference>=0?'avoided':'increased';
+  const result=document.getElementById('glec-results');
+  if(result)result.innerHTML=`
+    <div class="glec-card ${statusClass}"><b>${esc(q.status)}</b><div class="glec-mini" style="margin-top:4px">${q.gaps.length?esc(q.gaps.join(' · ')):'Required project fields are populated. Independent assurance is still separate from this calculation.'}</div></div>
+    <div class="glec-card"><b>WTW comparison</b><div class="glec-mini">Comparable urban parcel service; diesel baseline is routed independently using its own parcel capacity.</div>
+      <div class="glec-kpis">
+        <div class="glec-kpi"><span>SMC-Net WTW</span><b>${r.current.wtw.toFixed(2)} kg</b></div>
+        <div class="glec-kpi"><span>Diesel baseline WTW</span><b>${r.baseline.wtw.toFixed(2)} kg</b></div>
+        <div class="glec-kpi"><span>Emission difference</span><b>${signed(r.difference)} kg</b></div>
+        <div class="glec-kpi"><span>Relative change</span><b>${signed(r.reductionPct,1)}%</b></div>
+      </div>
+      <div style="margin-top:8px">${glecBar('Diesel baseline',r.baseline.wtw,max,true)}${glecBar('SMC-Net chain',r.current.wtw,max,false)}</div>
+      <div class="glec-source-note">Result: the SMC-Net scenario ${direction} <b>${Math.abs(r.difference).toFixed(2)} kg CO₂e</b> relative to the independently routed diesel comparison.</div>
+    </div>
+    <div class="glec-card"><b>Operational and energy-provision split</b>
+      <table class="glec-table"><thead><tr><th>Chain element</th><th>WTT</th><th>TTW</th><th>WTW</th></tr></thead><tbody>
+        <tr><td>SMC transport</td><td>${r.current.transportWtt.toFixed(2)}</td><td>${r.current.transportTtw.toFixed(2)}</td><td>${(r.current.transportWtt+r.current.transportTtw).toFixed(2)}</td></tr>
+        <tr><td>SMC hub</td><td>${r.current.hubWtt.toFixed(2)}</td><td>${r.current.hubTtw.toFixed(2)}</td><td>${(r.current.hubWtt+r.current.hubTtw).toFixed(2)}</td></tr>
+        <tr><td><b>SMC total</b></td><td><b>${r.current.wtt.toFixed(2)}</b></td><td><b>${r.current.ttw.toFixed(2)}</b></td><td><b>${r.current.wtw.toFixed(2)}</b></td></tr>
+        <tr><td>Diesel transport</td><td>${r.baseline.transportWtt.toFixed(2)}</td><td>${r.baseline.transportTtw.toFixed(2)}</td><td>${(r.baseline.transportWtt+r.baseline.transportTtw).toFixed(2)}</td></tr>
+        <tr><td>Baseline hub</td><td>${r.baseline.hubWtt.toFixed(2)}</td><td>${r.baseline.hubTtw.toFixed(2)}</td><td>${(r.baseline.hubWtt+r.baseline.hubTtw).toFixed(2)}</td></tr>
+        <tr><td><b>Baseline total</b></td><td><b>${r.baseline.wtt.toFixed(2)}</b></td><td><b>${r.baseline.ttw.toFixed(2)}</b></td><td><b>${r.baseline.wtw.toFixed(2)}</b></td></tr>
+      </tbody></table><div class="glec-mini" style="margin-top:5px">All values are kg CO₂e. WTW = WTT energy provision + TTW operational emissions.</div>
+    </div>
+    <div class="glec-card"><b>Activity and intensity</b>
+      <div class="glec-kpis">
+        <div class="glec-kpi"><span>SMC road distance</span><b>${r.current.km.toFixed(1)} km</b></div>
+        <div class="glec-kpi"><span>Baseline distance</span><b>${r.baseline.km.toFixed(1)} km</b></div>
+        <div class="glec-kpi"><span>SMC transport activity</span><b>${r.current.tkm.toFixed(2)} tkm</b></div>
+        <div class="glec-kpi"><span>Baseline activity</span><b>${r.baseline.tkm.toFixed(2)} tkm</b></div>
+        <div class="glec-kpi"><span>SMC intensity</span><b>${r.current.intensity.toFixed(3)} kg/tkm</b></div>
+        <div class="glec-kpi"><span>Baseline intensity</span><b>${r.baseline.intensity.toFixed(3)} kg/tkm</b></div>
+      </div>
+      <table class="glec-table"><tbody>
+        <tr><td>Freight mass</td><td>${r.massT.toFixed(3)} t</td></tr><tr><td>Parcels</td><td>${r.totalParcels}</td></tr>
+        <tr><td>E-bike distance / grid energy</td><td>${r.current.ebikeKm.toFixed(1)} km / ${r.current.ebikeGridKwh.toFixed(2)} kWh</td></tr>
+        <tr><td>E-van distance / grid energy</td><td>${r.current.evanKm.toFixed(1)} km / ${r.current.evanGridKwh.toFixed(2)} kWh</td></tr>
+        <tr><td>Diesel baseline trips / fuel</td><td>${r.baseline.tripCount} / ${r.baseline.fuelL.toFixed(2)} L</td></tr>
+        <tr><td>WTW per parcel</td><td>${r.current.perParcel.toFixed(3)} kg current · ${r.baseline.perParcel.toFixed(3)} kg baseline</td></tr>
+      </tbody></table>
+    </div>
+    <div class="glec-card"><b>Calculation equations</b><div class="glec-formula">Diesel WTW = route km × L/100 km ÷ 100 × (diesel WTT + diesel TTW)\nElectric WTW = route km × kWh/km ÷ (1 − charging loss) × electricity factor\nTransport activity = Σ(consignment mass in tonnes × routed distance to delivery)\nEmission intensity = total WTW kg CO₂e ÷ tonne-kilometres</div></div>
+    <div class="glec-card"><b>Data profile</b><div style="margin-top:5px">Distance ${sourceChip(i.qDistance)} Mass ${sourceChip(i.qMass)} Energy ${sourceChip(i.qEnergy)} Factors ${sourceChip(i.qFactors)}</div></div>`;
+
+  const quality=document.getElementById('glec-quality-output');
+  if(quality)quality.className=`glec-card ${statusClass}`,
+  quality.innerHTML=`<b>${esc(q.status)}</b><div class="glec-mini" style="margin-top:5px">${q.gaps.length?'<b>Open items:</b> '+esc(q.gaps.join('; ')):'No required project fields are blank.'}</div><table class="glec-table"><tbody><tr><td>Distance</td><td>${esc(i.qDistance)}</td></tr><tr><td>Mass</td><td>${esc(i.qMass)}</td></tr><tr><td>Energy</td><td>${esc(i.qEnergy)}</td></tr><tr><td>Factors</td><td>${esc(i.qFactors)}</td></tr><tr><td>Assurance</td><td>${esc(i.assurance)}</td></tr></tbody></table>`;
+
+  const reportBox=document.getElementById('glec-report-output');
+  if(reportBox)reportBox.textContent=`GLEC / ISO 14083 PROJECT REPORT\n\nReporting entity: ${i.entity||'Not entered'}\nService: ${i.serviceId||'Not entered'}\nReporting period: ${i.periodStart||'—'} to ${i.periodEnd||'—'}\nGenerated: ${new Date(r.generatedAt).toLocaleString()}\n\nBOUNDARY\n${i.boundary||'Not entered'}\n\nRESULTS\nSMC-Net WTW: ${r.current.wtw.toFixed(3)} kg CO2e\n  Energy provision (WTT): ${r.current.wtt.toFixed(3)} kg CO2e\n  Operational (TTW): ${r.current.ttw.toFixed(3)} kg CO2e\nDiesel baseline WTW: ${r.baseline.wtw.toFixed(3)} kg CO2e\nDifference: ${signed(r.difference,3)} kg CO2e\nRelative change: ${signed(r.reductionPct,2)}%\n\nACTIVITY\nFreight mass: ${r.massT.toFixed(3)} t\nSMC route distance: ${r.current.km.toFixed(3)} km\nBaseline route distance: ${r.baseline.km.toFixed(3)} km\nSMC transport activity: ${r.current.tkm.toFixed(3)} tkm\nBaseline transport activity: ${r.baseline.tkm.toFixed(3)} tkm\nSMC WTW intensity: ${r.current.intensity.toFixed(4)} kg CO2e/tkm\nBaseline WTW intensity: ${r.baseline.intensity.toFixed(4)} kg CO2e/tkm\n\nDATA QUALITY\nDistance: ${i.qDistance}\nMass: ${i.qMass}\nEnergy: ${i.qEnergy}\nFactors: ${i.qFactors}\nAssurance: ${i.assurance}\nStatus: ${q.status}\n\nFACTOR SOURCES\nDiesel: ${i.sourceDiesel}\nElectricity: ${i.sourceElectricity}\nVehicle energy: ${i.sourceEnergy}\nMass: ${i.sourceMass}\n\nDEVIATIONS / LIMITATIONS\n${i.deviations||'None entered'}\n\nThis file supports GLEC/ISO 14083-aligned calculation and reporting. It is not itself independent verification or certification.`;
+
+  document.getElementById('sum-co2').textContent=`${signed(r.difference)} kg WTW`;
+  const header=document.getElementById('glec-header-status');if(header){header.textContent=q.gaps.length?'Inputs incomplete':'Calculated';header.style.background=q.gaps.length?'#fef3c7':'#dcfce7';header.style.color=q.gaps.length?'#92400e':'#166534'}
+}
+
+function updateGlecPanelEmpty(){
+  lastGlecReport=null;lastRouteRecords=[];
+  const result=document.getElementById('glec-results');if(result)result.innerHTML='<div class="glec-card"><b>Generate routes to calculate the GLEC model.</b><div class="glec-mini" style="margin-top:4px">The model includes independently routed diesel baseline trips, WTT/TTW/WTW, tonne-kilometres, electric energy, charging losses, and optional hub operations.</div></div>';
+  const report=document.getElementById('glec-report-output');if(report)report.textContent='Generate routes to create the GLEC reporting summary.';
+  const q=document.getElementById('glec-quality-output');if(q){q.className='glec-card';q.innerHTML='<b>Quality profile</b><div class="glec-mini" style="margin-top:4px">Generate routes to evaluate completeness and traceability.</div>'}
+  const header=document.getElementById('glec-header-status');if(header){header.textContent='Not calculated';header.style.background='#e2e8f0';header.style.color='#334155'}
+}
+
+async function recalculateGlecModel(){
+  if(!lastPlanGenerated||!lastRouteRecords.length){switchGlecTab('results',document.querySelector('[data-glec-tab="results"]'));updateGlecPanelEmpty();return}
+  const result=document.getElementById('glec-results');if(result)result.innerHTML='<div class="glec-loading"><span class="glec-spinner"></span><span>Recalculating GLEC transport and hub emissions…</span></div>';
+  lastGlecReport=await calculateGlecModel(lastRouteRecords);renderGlecReport(lastGlecReport);switchGlecTab('results',document.querySelector('[data-glec-tab="results"]'));
+}
+
+function resetGlecDefaults(){
+  const defaults={'glec-parcel-kg':5,'glec-baseline-cap':45,'glec-diesel-l100':10,'glec-evan-kwhkm':0.23,'glec-ebike-kwhkm':0.018,'glec-charge-loss':10,'glec-vehicle-ref-kg':0,'glec-ref-gwp':1430,'glec-diesel-ttw':2.68,'glec-diesel-wtt':0.8,'glec-electricity-ef':0.35,'glec-hub-kwh':4,'glec-hub-diesel-l':0,'glec-hub-ref-kg':0,'glec-hub-direct':0};
+  Object.entries(defaults).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});
+}
+
+function downloadGlec(filename,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500)}
+function exportGlecJson(){if(!lastGlecReport)return;downloadGlec('smc-net-glec-report.json',JSON.stringify(lastGlecReport,null,2),'application/json')}
+function exportGlecCsv(){
+  if(!lastGlecReport)return;const r=lastGlecReport;
+  const rows=[['metric','smc_net','diesel_baseline','unit'],['WTW',r.current.wtw,r.baseline.wtw,'kg CO2e'],['WTT',r.current.wtt,r.baseline.wtt,'kg CO2e'],['TTW',r.current.ttw,r.baseline.ttw,'kg CO2e'],['route_distance',r.current.km,r.baseline.km,'km'],['transport_activity',r.current.tkm,r.baseline.tkm,'tonne-km'],['WTW_intensity',r.current.intensity,r.baseline.intensity,'kg CO2e/tonne-km'],['per_parcel',r.current.perParcel,r.baseline.perParcel,'kg CO2e/parcel'],['difference',r.difference,'','kg CO2e'],['relative_change',r.reductionPct,'','percent']];
+  downloadGlec('smc-net-glec-report.csv',rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv')
+}
+
+function fleetSummaryHtml(routes,totalKm,totalMinutes,maxResourceMinutes,resourceKm){
+  const totalStops=stops.length,totalParcels=stops.reduce((s,p)=>s+p.parcels,0),totalStopMins=routes.reduce((s,r)=>s+(r.stops?r.stops.length:0)*SERVICE_MIN_PER_STOP,0),totalTravelMins=Math.max(0,totalMinutes-totalStopMins),ebikeKm=resourceKm.ebike||0,evanKm=resourceKm.evan||0;
+  return `<div class="step" style="border:2px solid #0f766e;background:#f0fdfa"><b>Fleet operating summary</b><br><span class="muted">This adds together all active resource routes: E-Bike 1 + E-Bike 2 + E-Bike 3 + E-Van 1.</span><div class="bigstat"><div><span class="muted">Total fleet distance</span><br><b>${totalKm.toFixed(1)} km</b></div><div><span class="muted">Total fleet time</span><br><b>${(totalMinutes/60).toFixed(2)} h</b></div><div><span class="muted">Travel time only</span><br><b>${(totalTravelMins/60).toFixed(2)} h</b></div><div><span class="muted">Stop/service time</span><br><b>${(totalStopMins/60).toFixed(2)} h</b></div><div><span class="muted">E-bike distance</span><br><b>${ebikeKm.toFixed(1)} km</b></div><div><span class="muted">E-van distance</span><br><b>${evanKm.toFixed(1)} km</b></div><div><span class="muted">Longest single resource</span><br><b>${(maxResourceMinutes/60).toFixed(2)} h</b></div><div><span class="muted">Stops / parcels</span><br><b>${totalStops} / ${totalParcels}</b></div></div></div>`;
+}
+
+async function planRoutes(){
+  clearRoutes();
+  if(!stops.length){document.getElementById('timeline').innerHTML='<p class="muted">Click at least one delivery location on the map first.</p>';return}
+  const routes=allocateStops();colorStopMarkers(routes);
+  let totalKm=0,totalMinutes=0,maxResourceMinutes=0,totalHtml='',allCoords=[[HUB.lng,HUB.lat]],sources=[],warnings=[],resourceKm={ebike:0,evan:0},routeRecords=[];
+  document.getElementById('timeline').innerHTML=`<p class="muted">Calculating clustered routes and the independent GLEC diesel comparison for start time ${selectedStartLabel()}…</p>`;
+  const glecResult=document.getElementById('glec-results');if(glecResult)glecResult.innerHTML='<div class="glec-loading"><span class="glec-spinner"></span><span>Calculating route activity, baseline trips, energy and CO₂e…</span></div>';
+  for(const r of routes){
+    if(!r.stops.length)continue;
+    const pts=[HUB,...r.stops,HUB],stopMins=r.stops.length*SERVICE_MIN_PER_STOP;
+    const routed=await routeWithFallback(pts,r.vehicle),geo=routed.geo,km=routed.km,travelMins=routed.mins,mins=travelMins+stopMins,source=routed.source;
+    const legKm=routed.legKm?.length===pts.length-1?routed.legKm:fallbackLegKm(pts);
+    routeRecords.push({id:r.id,name:r.name,kind:r.kind,vehicle:r.vehicle,stops:r.stops.map(s=>({...s})),km,legKm,source});
+    sources.push(source);totalKm+=km;if(r.kind==='van')resourceKm.evan+=km;else resourceKm.ebike+=km;totalMinutes+=mins;maxResourceMinutes=Math.max(maxResourceMinutes,mins);
+    addClusterArea(r);
+    const id='route-'+r.id+'-'+Date.now();routeIds.push(id);const resColor=RESOURCE_COLORS[r.id]||'#2563eb';
+    map.addSource(id,{type:'geojson',data:{type:'Feature',geometry:geo,properties:{resource:r.name}}});
+    map.addLayer({id,type:'line',source:id,layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':resColor,'line-width':r.kind==='van'?7:5,'line-opacity':0.9}});
+    geo.coordinates.forEach(c=>allCoords.push(c));
+    const routeHours=mins/60,deadlineStatus=routeHours<=DAILY_LIMIT_HOURS?`<span style="color:#16a34a;font-weight:800">Within ${DAILY_LIMIT_HOURS} h</span>`:`<span style="color:#dc2626;font-weight:800">Exceeds ${DAILY_LIMIT_HOURS} h</span>`,overload=r.parcels>r.capacity?` <span style="color:#dc2626;font-weight:800">Over capacity</span>`:'';
+    if(routeHours>DAILY_LIMIT_HOURS)warnings.push(`${r.name} exceeds the daily deadline (${routeHours.toFixed(2)} h).`);if(r.parcels>r.capacity)warnings.push(`${r.name} exceeds parcel capacity (${r.parcels}/${r.capacity}).`);
+    const clusterLabel=r.kind==='van'?'Priority high-capacity van cluster':'Motor e-bike zone cluster',stopDetail=`${r.stops.length} × ${SERVICE_MIN_PER_STOP} min = ${stopMins.toFixed(1)} min`;
+    totalHtml+=`<div class="step resourceCard" style="--res-color:${RESOURCE_COLORS[r.id]||'#2563eb'}"><b><span class="resourceSwatch" style="--res-color:${RESOURCE_COLORS[r.id]||'#2563eb'}"></span>${r.name}</b><span class="resourceTag">${r.vehicle}</span>${overload}<br><span class="muted">${clusterLabel} · ${r.stops.length} stops · ${r.parcels}/${r.capacity} parcels · ${km.toFixed(1)} km · travel <b>${hoursLabel(travelMins)}</b> · stop time <b>${stopDetail}</b> · final total <b>${routeHours.toFixed(2)} h</b> · ${deadlineStatus} · ${source}</span>${deadlineNotice(mins)}<table class="parcelTable"><thead><tr><th>Stop</th><th>Parcels</th><th>Service time</th><th>Location</th></tr></thead><tbody>${r.stops.map((s,i)=>`<tr><td>${i+1}. ${s.name}</td><td>${s.parcels}</td><td>${SERVICE_MIN_PER_STOP} min</td><td>${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  lastRouteRecords=routeRecords;lastGlecReport=await calculateGlecModel(routeRecords);renderGlecReport(lastGlecReport);
+  const active=routes.filter(r=>r.stops.length).length,feasible=warnings.length===0,notice=feasible?`<div class="hint"><b>Scenario feasible:</b> every active resource finishes within the ${DAILY_LIMIT_HOURS}-hour deadline.</div>`:`<div class="warnbox"><b>Scenario warning:</b> this delivery day is not feasible as planned.<br>${warnings.map(w=>'• '+w).join('<br>')}</div>`,fleetSummary=fleetSummaryHtml(routes,totalKm,totalMinutes,maxResourceMinutes,resourceKm);
+  const carbonBrief=`<div class="step" style="border-left:5px solid #0f766e"><b>GLEC result</b><br><span class="muted">SMC-Net WTW <b>${lastGlecReport.current.wtw.toFixed(2)} kg CO₂e</b> · independently routed diesel baseline <b>${lastGlecReport.baseline.wtw.toFixed(2)} kg CO₂e</b> · difference <b>${signed(lastGlecReport.difference)} kg</b>. Full breakdown is in the right panel.</span></div>`;
+  document.getElementById('timeline').innerHTML=`<div class="step"><b>Total clustered allocation</b><br><span class="muted">Route color and cluster shade identify each resource. ${active}/4 active resources · ${stops.length} delivery stop(s) · ${stops.reduce((s,p)=>s+p.parcels,0)} parcel(s) · ${[...new Set(sources)].join(', ')}</span><br>Start time: <b>${selectedStartLabel()}</b><br><b>${totalKm.toFixed(1)} km</b> total road distance · <b>${hoursLabel(totalMinutes)}</b> total fleet operating time · <b>${hoursLabel(maxResourceMinutes)}</b> longest resource route</div>${fleetSummary}${carbonBrief}${notice}`+totalHtml;
+  lastPlanGenerated=true;document.getElementById('sum-km').textContent=totalKm.toFixed(1);document.getElementById('sum-time').textContent=(totalMinutes/60).toFixed(2)+' h';fitToCoords(allCoords)
+}
+function fitToCoords(coords){if(!coords.length)return;let minLng=coords[0][0],maxLng=coords[0][0],minLat=coords[0][1],maxLat=coords[0][1];coords.forEach(c=>{minLng=Math.min(minLng,c[0]);maxLng=Math.max(maxLng,c[0]);minLat=Math.min(minLat,c[1]);maxLat=Math.max(maxLat,c[1])});map.fitBounds([[minLng,minLat],[maxLng,maxLat]],{padding:70,maxZoom:15,duration:700})}
+document.getElementById('start-time').addEventListener('change',rerunAfterTimeChange);
+
+function initGlecDates(){const y=new Date().getFullYear();const s=document.getElementById('glec-period-start'),e=document.getElementById('glec-period-end');if(s&&!s.value)s.value=`${y}-01-01`;if(e&&!e.value)e.value=`${y}-12-31`}
+initGlecDates();
+updateSummary();
+
+function refreshBottomKpi(){
+  const box=document.getElementById('bottom-co2-plan'); if(!box)return;
+  box.innerHTML=`<div class="miniStat"><span>Total km</span><b>${document.getElementById('sum-km')?.textContent||'—'}</b></div><div class="miniStat"><span>Total hrs</span><b>${document.getElementById('sum-time')?.textContent||'—'}</b></div><div class="miniStat"><span>CO₂e</span><b>${document.getElementById('sum-co2')?.textContent||'—'}</b></div><div class="miniStat"><span>Mode</span><b>GLEC</b></div>`;
+}
+const __planRoutesOriginal=planRoutes;
+planRoutes=async function(){await __planRoutesOriginal();refreshBottomKpi();};
+const __clearStopsOriginal=clearStops;
+clearStops=function(){__clearStopsOriginal();refreshBottomKpi();};
+</script>
+</body>
+</html>
