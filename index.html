@@ -380,15 +380,35 @@ let lastPlanGenerated=false;
 const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[9.1783,48.7756],zoom:12,minZoom:9,maxZoom:18,pitch:0,attributionControl:true});
 map.addControl(new maplibregl.NavigationControl({visualizePitch:false}),'top-left');
 map.addControl(new maplibregl.ScaleControl({maxWidth:160,unit:'metric'}),'bottom-left');
-map.on('error',()=>{setTimeout(()=>{if(!map.loaded())document.getElementById('map-error').style.display='flex'},3500)});
-map.on('load',()=>{
+let mapReady=false,usedFallback=false;
+const mapErrEl=document.getElementById('map-error');
+const FALLBACK_STYLE={version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,maxzoom:19,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]};
+function addTargetLayers(){
+  if(map.getSource('target'))return;
   map.addSource('target',{type:'geojson',data:{type:'Feature',geometry:{type:'Polygon',coordinates:[TARGET]},properties:{}}});
   map.addLayer({id:'target-fill',type:'fill',source:'target',paint:{'fill-color':'#fbbf24','fill-opacity':0.13}});
   map.addLayer({id:'target-line',type:'line',source:'target',paint:{'line-color':'#f59e0b','line-width':3,'line-dasharray':[2,2]}});
+}
+function useFallbackMap(){
+  if(usedFallback)return;usedFallback=true;
+  console.warn('Primary basemap did not load; switching to OpenStreetMap tiles.');
+  map.setStyle(FALLBACK_STYLE);
+  map.once('style.load',()=>{addTargetLayers();addHubMarker();mapReady=true;mapErrEl.style.display='none'});
+}
+// A single failed tile is not fatal: log it and keep going.
+map.on('error',e=>console.warn('Map error:',e&&e.error&&e.error.message||e));
+// Primary style never became ready: try the fallback, then show the message only if that fails too.
+setTimeout(()=>{if(!mapReady)useFallbackMap()},8000);
+setTimeout(()=>{if(!mapReady)mapErrEl.style.display='flex'},16000);
+map.on('idle',()=>{mapErrEl.style.display='none'});
+map.on('load',()=>{
+  mapReady=true;mapErrEl.style.display='none';
+  addTargetLayers();
   addHubMarker();
   map.resize();
 });
-function addHubMarker(){const el=document.createElement('div');el.className='hub';new maplibregl.Marker({element:el}).setLngLat([HUB.lng,HUB.lat]).setPopup(new maplibregl.Popup().setHTML('<b>SMC-Net Consolidation Hub</b><br>Stuttgart Mitte')).addTo(map)}
+let hubAdded=false;
+function addHubMarker(){if(hubAdded)return;hubAdded=true;const el=document.createElement('div');el.className='hub';new maplibregl.Marker({element:el}).setLngLat([HUB.lng,HUB.lat]).setPopup(new maplibregl.Popup().setHTML('<b>SMC-Net Consolidation Hub</b><br>Stuttgart Mitte')).addTo(map)}
 function isInsideTarget(lng,lat){let inside=false;for(let i=0,j=TARGET.length-1;i<TARGET.length;j=i++){const xi=TARGET[i][0],yi=TARGET[i][1],xj=TARGET[j][0],yj=TARGET[j][1];const intersect=((yi>lat)!=(yj>lat))&&(lng<(xj-xi)*(lat-yi)/(yj-yi)+xi);if(intersect)inside=!inside}return inside}
 function flashAreaWarning(){const w=document.getElementById('area-warning');w.style.display='block';setTimeout(()=>w.style.display='none',3500)}
 function havKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180,la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180;const x=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
