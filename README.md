@@ -4,7 +4,7 @@
 
 A single-file web app (`index.html`) used to plan consolidated last-mile delivery routes for Stuttgart SMEs from one micro-consolidation hub, and to estimate the CO₂e of those routes. It was built as the operational tool behind the SMC-Net business plan (Production & Operations Management, PG POM 2026, team *Fast and Curious*).
 
-> Live demo: _add your GitHub Pages link here_ (Settings → Pages → `main` / root)
+> Live demo: https://ealins.github.io/SMC-Net_Dispatch/
 
 ---
 
