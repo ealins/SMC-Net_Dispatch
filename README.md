@@ -27,7 +27,12 @@ Small shops in Stuttgart receive many small, irregular deliveries from many supp
 - **Routing:** uses the HERE Routing API for road routes and falls back to OSRM, then to a distance estimate, if HERE is unavailable. E-bike routes avoid controlled-access highways.
 - **Operations overview and resource plan:** checks route time against the 7.5 h daily limit per resource, using modeled speeds of 15 km/h (e-bike) and 28 km/h (e-van) when needed.
 - **Carbon report (GLEC / ISO 14083):** a calculator for well-to-wheel emissions of the electric fleet versus a diesel-van baseline. It covers vehicle energy, energy emission factors, hub operation, data quality and assurance notes, and factor traceability.
-- **Export:** results can be exported as CSV or JSON.
+- **Demo day:** one click loads 36 synthetic Stuttgart deliveries and plans them. It works without a HERE key (OSRM routing).
+- **Stakeholders tab:** the same planned day viewed by SMEs, the hub operator, the city, residents, energy and charging, and suppliers/carriers. Each view lists what to validate with real data.
+- **Scenarios tab:** compare 10 / 20 / 30% SME adoption side by side (time feasibility, utilisation, CO₂e vs diesel), estimate the time-limited daily capacity, and run a ±20% sensitivity on the main inputs. An assumptions table marks each value as plan, input, assumption, estimator or synthetic.
+- **Export:** GLEC results and the scenario study can be exported as CSV or JSON.
+
+> The Stakeholders and Scenarios results are **modelled**, not measured. Scenario deliveries are synthetic points weighted by district, and distances are straight-line × 1.45. They are meant to show where the system could help each stakeholder, to be tested against interviews, pilot data and municipal data.
 
 ### Carbon results from the business plan (120 deliveries/day, full scope)
 

@@ -96,7 +96,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .parcelTable th{color:var(--ink-2);background:#f6f9f7;font-weight:700}
 .miniGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .bottomSection{min-height:0;overflow:auto;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;background:#f6f9f7}
-.bottomControls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end}.bottomControls .btn{padding:9px 8px}.bottom h2{margin-bottom:6px}
+.bottomControls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end}.bottomControls .btn{padding:9px 8px}.bottomControls .btnrow{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.sens-bar{height:5px;border-radius:99px;margin-top:4px;background:linear-gradient(90deg,#0f766e,#2bb7a6);transition:width .6s var(--ease)}.bottom h2{margin-bottom:6px}
 .compactStops{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
 .compactStops .stop{min-width:170px;margin:0;background:#fff}
 #area-warning{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:3;width:300px;box-shadow:var(--shadow)}
@@ -107,8 +107,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .rightpanel .head{padding-bottom:12px}
 .glec-headrow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .glec-status-pill{font-size:10px;font-weight:700;border-radius:999px;padding:5px 10px;background:#eaf0ed;color:var(--ink-2);white-space:nowrap;transition:background .3s,color .3s}
-.glec-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 14px 0;padding:4px;border-radius:12px;background:#eef3f0;flex:0 0 auto}
-.glec-tab{font-family:inherit;border:0;background:transparent;color:var(--ink-2);border-radius:9px;padding:8px 4px;font-size:11px;font-weight:700;cursor:pointer;transition:background .25s var(--ease),color .25s,box-shadow .25s}
+.glec-tabs{display:flex;gap:4px;margin:10px 14px 0;padding:4px;border-radius:12px;background:#eef3f0;flex:0 0 auto;overflow-x:auto;scrollbar-width:none}.glec-tabs::-webkit-scrollbar{display:none}
+.glec-tab{font-family:inherit;border:0;background:transparent;color:var(--ink-2);border-radius:9px;padding:8px 12px;flex:1 0 auto;white-space:nowrap;font-size:11px;font-weight:700;cursor:pointer;transition:background .25s var(--ease),color .25s,box-shadow .25s}
 .glec-tab:hover{color:var(--ink)}
 .glec-tab.active{background:#fff;color:var(--teal);box-shadow:0 1px 3px #0f1f1a1f,0 4px 10px -4px #0f1f1a33}
 .glec-workspace{flex:1;min-height:0;overflow:auto;padding:12px 14px;-webkit-overflow-scrolling:touch}
@@ -215,6 +215,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       <button class="glec-tab" data-glec-tab="inputs" onclick="switchGlecTab('inputs',this)">Inputs</button>
       <button class="glec-tab" data-glec-tab="quality" onclick="switchGlecTab('quality',this)">Quality</button>
       <button class="glec-tab" data-glec-tab="report" onclick="switchGlecTab('report',this)">Report</button>
+      <button class="glec-tab" data-glec-tab="stakeholders" onclick="switchGlecTab('stakeholders',this)">Stakeholders</button>
+      <button class="glec-tab" data-glec-tab="scenarios" onclick="switchGlecTab('scenarios',this)">Scenarios</button>
     </nav>
     <div class="glec-workspace">
       <section id="glec-pane-results" class="glec-pane active">
@@ -331,6 +333,33 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
         </div>
         <div id="glec-report-output" class="glec-report-box">Generate routes to create the GLEC reporting summary.</div>
       </section>
+      <section id="glec-pane-stakeholders" class="glec-pane">
+        <div class="glec-card"><b>One plan, six viewpoints</b><div class="glec-mini" style="margin-top:4px">The same planned day, read by what each stakeholder cares about. Values come from the current routes and your GLEC inputs, so they are modelled, not measured.</div></div>
+        <details class="glec-section"><summary>Optional inputs</summary><div class="glec-section-body"><div class="glec-grid2">
+          <label class="glec-field">Cost per resource-hour (€)<input id="lens-rate" type="number" min="0" step="0.5" placeholder="optional" oninput="renderStakeholders()"></label>
+          <label class="glec-field">Charging window (h)<input id="lens-charge-h" type="number" min="1" step="1" value="8" oninput="renderStakeholders()"></label>
+        </div></div></details>
+        <div id="lens-output"></div>
+      </section>
+      <section id="glec-pane-scenarios" class="glec-pane">
+        <details class="glec-section" open><summary>Scenario settings</summary><div class="glec-section-body">
+          <div class="glec-grid2">
+            <label class="glec-field">SME universe<input id="scn-universe" type="number" min="1" value="213"></label>
+            <label class="glec-field">Deliveries per SME per day<input id="scn-mult" type="number" min="0.1" step="0.1" value="2.5"></label>
+            <label class="glec-field">Parcels per delivery<input id="scn-ppd" type="number" min="1" step="1" value="1"></label>
+          </div>
+          <div class="glec-grid3" style="margin-top:7px">
+            <label class="glec-field">Adoption A (%)<input id="scn-a1" type="number" min="1" max="100" value="10"></label>
+            <label class="glec-field">Adoption B (%)<input id="scn-a2" type="number" min="1" max="100" value="20"></label>
+            <label class="glec-field">Adoption C (%)<input id="scn-a3" type="number" min="1" max="100" value="30"></label>
+          </div>
+          <div class="glec-actions"><button class="btn" onclick="runScenarioComparison()">Compare scenarios</button><button class="btn secondary" onclick="runSensitivity()">Run sensitivity</button></div>
+        </div></details>
+        <div id="scn-output"></div>
+        <div id="scn-sens"></div>
+        <details class="glec-section"><summary>Assumptions and sources</summary><div class="glec-section-body"><div id="scn-assumptions"></div></div></details>
+        <div class="glec-actions"><button class="btn secondary" onclick="exportScenariosJson()">Export JSON</button><button class="btn ghost" onclick="exportScenariosCsv()">Export CSV</button></div>
+      </section>
     </div>
   </aside>
 
@@ -341,9 +370,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
         <label class="label">Start<input id="start-time" type="time" value="08:30"></label>
         <label class="label">E-bike cap<input id="bike-capacity" type="number" min="1" value="12"></label>
         <label class="label">E-van cap<input id="van-capacity" type="number" min="1" value="45"></label>
-        <button class="btn" onclick="planRoutes()">Generate</button>
-        <button class="btn secondary" onclick="testHereApi()">Test HERE</button>
-        <button class="btn ghost" onclick="clearStops()">Clear stops</button>
+        <div class="btnrow">
+          <button class="btn" onclick="planRoutes()">Generate</button>
+          <button class="btn secondary" onclick="loadDemoDay()" title="Load 36 synthetic Stuttgart deliveries and plan them">Demo day</button>
+          <button class="btn ghost" onclick="testHereApi()">Test HERE</button>
+          <button class="btn ghost" onclick="clearStops()">Clear</button>
+        </div>
       </div>
     </div>
     <div class="bottomSection"><h2>Delivery stops</h2><div id="stop-list"><p class="muted">Click map to add stops.</p></div></div>
@@ -362,12 +394,14 @@ const RESOURCE_COLORS={
 };
 const RESOURCE_LABELS={1:'Motor E-Bike 1',2:'Motor E-Bike 2',3:'Motor E-Bike 3',4:'E-Van 1'};
 // HERE API key is NOT stored in this file. It is asked once and kept in this browser only.
+let hereDeclined=false;
 function getHereKey(){
   let k='';
   try{k=localStorage.getItem('here_api_key')||''}catch(_){}
-  if(!k){
-    k=(window.prompt('Enter HERE API key (stored only in this browser):')||'').trim();
+  if(!k&&!hereDeclined){
+    k=(window.prompt('Enter HERE API key (stored only in this browser). Cancel to use OSRM routing:')||'').trim();
     if(k){try{localStorage.setItem('here_api_key',k)}catch(_){}}
+    else hereDeclined=true;
   }
   if(!k)throw new Error('HERE API key missing');
   return k;
@@ -416,7 +450,7 @@ function estRoadKm(a,b){return havKm(a,b)*1.45}
 function bearingName(a,b){const dy=b.lat-a.lat,dx=b.lng-a.lng;if(Math.abs(dy)>Math.abs(dx)*1.5)return dy>0?'N':'S';if(Math.abs(dx)>Math.abs(dy)*1.5)return dx>0?'E':'W';return (dy>0?'N':'S')+(dx>0?'E':'W')}
 function popupHtml(p){return `<div><div class="popup-title">${p.name}</div><div class="muted">Delivery location</div><div class="popup-grid"><div><span class="muted">Coordinates</span><br><b>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</b></div><div><span class="muted">Direction</span><br><b>${bearingName(HUB,p)}</b></div><div><span class="muted">Road estimate</span><br><b>${estRoadKm(HUB,p).toFixed(1)} km</b></div><div><span class="muted">Parcels</span><br><b>${p.parcels}</b></div></div></div>`}
 map.on('click',e=>{if(!isInsideTarget(e.lngLat.lng,e.lngLat.lat)){flashAreaWarning();return}const n=stops.length+1;const p={id:'stop-'+Date.now(),name:'Delivery Stop '+n,lat:e.lngLat.lat,lng:e.lngLat.lng,parcels:1};stops.push(p);addStopMarker(p);renderStops();updateSummary();});
-function addStopMarker(p){const el=document.createElement('div');el.className='marker';const marker=new maplibregl.Marker({element:el,draggable:true}).setLngLat([p.lng,p.lat]).setPopup(new maplibregl.Popup().setHTML(popupHtml(p))).addTo(map);marker.on('dragend',()=>{const ll=marker.getLngLat();if(!isInsideTarget(ll.lng,ll.lat)){marker.setLngLat([p.lng,p.lat]);flashAreaWarning();return}p.lng=ll.lng;p.lat=ll.lat;marker.setPopup(new maplibregl.Popup().setHTML(popupHtml(p)));renderStops();clearRoutes()});markers[p.id]=marker;marker.togglePopup()}
+function addStopMarker(p,quiet){const el=document.createElement('div');el.className='marker';const marker=new maplibregl.Marker({element:el,draggable:true}).setLngLat([p.lng,p.lat]).setPopup(new maplibregl.Popup().setHTML(popupHtml(p))).addTo(map);marker.on('dragend',()=>{const ll=marker.getLngLat();if(!isInsideTarget(ll.lng,ll.lat)){marker.setLngLat([p.lng,p.lat]);flashAreaWarning();return}p.lng=ll.lng;p.lat=ll.lat;marker.setPopup(new maplibregl.Popup().setHTML(popupHtml(p)));renderStops();clearRoutes()});markers[p.id]=marker;if(!quiet)marker.togglePopup()}
 function renderStops(){const box=document.getElementById('stop-list');if(!stops.length){box.innerHTML='<p class="muted">No delivery stops yet. Click the map to add stops.</p>';return}box.innerHTML=stops.map((p,i)=>{const assigned=p.assignedResource?`<span style="color:${p.assignedColor};font-weight:800">${p.assignedResource}</span>`:'<span class="muted">Not planned</span>';return `<div class="stop"><button class="del" onclick="removeStop('${p.id}')">×</button><b>${i+1}. Stop</b><div class="smallgrid"><span>Parcels</span><span>${assigned}</span></div><label class="label" style="margin-top:6px">Parcels<input type="number" min="1" value="${p.parcels}" onchange="updateParcels('${p.id}',this.value)"></label></div>`}).join('')}
 function focusStop(id){const p=stops.find(x=>x.id===id);if(!p)return;map.flyTo({center:[p.lng,p.lat],zoom:15});markers[id].togglePopup()}
 function updateParcels(id,v){const p=stops.find(x=>x.id===id);if(p){p.parcels=Math.max(1,Number(v)||1);markers[id].setPopup(new maplibregl.Popup().setHTML(popupHtml(p)));updateSummary();clearRoutes()}}
@@ -598,6 +632,7 @@ async function getHereRoute(points,vehicle){
   return {geo:{type:'LineString',coordinates:coords},km,mins:duration/60,source:'HERE '+mode,legKm};
 }
 async function testHereApi(){
+  hereDeclined=false;
   const box=document.getElementById('api-status');
   const timeline=document.getElementById('timeline');
   box.textContent='Testing HERE API...';
@@ -868,7 +903,7 @@ async function planRoutes(){
     const pts=[HUB,...r.stops,HUB],stopMins=r.stops.length*SERVICE_MIN_PER_STOP;
     const routed=await routeWithFallback(pts,r.vehicle),geo=routed.geo,km=routed.km,travelMins=routed.mins,mins=travelMins+stopMins,source=routed.source;
     const legKm=routed.legKm?.length===pts.length-1?routed.legKm:fallbackLegKm(pts);
-    routeRecords.push({id:r.id,name:r.name,kind:r.kind,vehicle:r.vehicle,stops:r.stops.map(s=>({...s})),km,legKm,source});
+    routeRecords.push({id:r.id,name:r.name,kind:r.kind,vehicle:r.vehicle,stops:r.stops.map(s=>({...s})),km,legKm,source,travelMins,mins});
     sources.push(source);totalKm+=km;if(r.kind==='van')resourceKm.evan+=km;else resourceKm.ebike+=km;totalMinutes+=mins;maxResourceMinutes=Math.max(maxResourceMinutes,mins);
     addClusterArea(r);
     const id='route-'+r.id+'-'+Date.now();routeIds.push(id);const resColor=RESOURCE_COLORS[r.id]||'#2563eb';
@@ -894,6 +929,7 @@ initGlecDates();
 updateSummary();
 
 function refreshBottomKpi(){
+  try{renderStakeholders();renderAssumptions()}catch(e){console.warn('lens',e)}
   const box=document.getElementById('bottom-co2-plan'); if(!box)return;
   box.innerHTML=`<div class="miniStat"><span>Total km</span><b>${document.getElementById('sum-km')?.textContent||'—'}</b></div><div class="miniStat"><span>Total hrs</span><b>${document.getElementById('sum-time')?.textContent||'—'}</b></div><div class="miniStat"><span>CO₂e</span><b>${document.getElementById('sum-co2')?.textContent||'—'}</b></div><div class="miniStat"><span>Mode</span><b>GLEC</b></div>`;
 }
@@ -901,10 +937,280 @@ const __planRoutesOriginal=planRoutes;
 planRoutes=async function(){await __planRoutesOriginal();refreshBottomKpi();};
 const __clearStopsOriginal=clearStops;
 clearStops=function(){__clearStopsOriginal();refreshBottomKpi();};
+
+/* =====================================================================
+   Research layer: demo day, scenario comparison, sensitivity,
+   stakeholder views, assumptions and export.
+   All results here are MODELLED from the planner's own estimators.
+   ===================================================================== */
+const DEMO_DISTRICTS=[ // name, lat, lng, weight (relative share of deliveries)
+  ['Mitte',48.7783,9.1800,5],['Bad Cannstatt',48.8050,9.2180,4],['Nord',48.7960,9.1830,3],['Ost',48.7800,9.2100,3],
+  ['Süd',48.7580,9.1700,3],['West',48.7740,9.1500,3],['Feuerbach',48.8100,9.1600,3],['Vaihingen',48.7300,9.1100,2],
+  ['Möhringen',48.7260,9.1650,2],['Degerloch',48.7470,9.1700,2],['Untertürkheim',48.7750,9.2650,2],['Zuffenhausen',48.8350,9.1650,2]
+];
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+// Synthetic, seeded delivery points weighted by district. NOT real SME locations.
+function makeDemoStops(n,parcelsPerStop,seed){
+  const r=rng(seed||7),total=DEMO_DISTRICTS.reduce((s,d)=>s+d[3],0),out=[];
+  for(let i=0;i<n;i++){
+    let pick=r()*total,d=DEMO_DISTRICTS[0];
+    for(const x of DEMO_DISTRICTS){pick-=x[3];if(pick<=0){d=x;break}}
+    let lat,lng,tries=0;
+    do{lat=d[1]+(r()-.5)*0.016;lng=d[2]+(r()-.5)*0.024;tries++}while(!isInsideTarget(lng,lat)&&tries<30);
+    if(!isInsideTarget(lng,lat)){lat=HUB.lat+(r()-.5)*0.01;lng=HUB.lng+(r()-.5)*0.01}
+    const parcels=typeof parcelsPerStop==='function'?parcelsPerStop(r):parcelsPerStop;
+    out.push({id:'demo-'+(seed||7)+'-'+i,name:`${d[0]} stop ${i+1}`,lat,lng,parcels});
+  }
+  return out;
+}
+async function loadDemoDay(){
+  clearStops();
+  stops=makeDemoStops(36,r=>1+Math.floor(r()*3),7);
+  stops.forEach(p=>addStopMarker(p,true));
+  renderStops();updateSummary();
+  fitToCoords(stops.map(p=>[p.lng,p.lat]));
+  // Demo works without a HERE key: use OSRM unless a key is already stored.
+  let hasKey=false;try{hasKey=!!localStorage.getItem('here_api_key')}catch(_){}
+  const prev=hereDeclined;if(!hasKey)hereDeclined=true;
+  try{await planRoutes()}finally{hereDeclined=prev}
+}
+
+/* ---------- number helpers ---------- */
+const fx=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):'—';
+const hm=m=>{const t=Math.round(m);return String(Math.floor(t/60)%24).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
+function downloadText(name,text,mime){const b=new Blob([text],{type:mime}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
+
+/* ---------- scenario engine (estimator based, no routing API) ---------- */
+function allocateScenario(n,ppd,seed){
+  const saved=stops;
+  try{stops=makeDemoStops(n,ppd,seed||11);const arr=stops;const routes=allocateStops();return {arr,routes}}
+  finally{stops=saved}
+}
+function evalScenario(alloc,opts){
+  const o=Object.assign({roadFactor:1.45,bikeKmh:MOTOR_EBIKE_SPEED_KMH,vanKmh:EVAN_EST_SPEED_KMH,serviceMin:SERVICE_MIN_PER_STOP},opts||{});
+  const gi=Object.assign({},getGlecInputs(),(opts&&opts.inputs)||{});
+  const rk=(a,b)=>havKm(a,b)*o.roadFactor;
+  const routeKm=pts=>{let k=0;for(let i=0;i<pts.length-1;i++)k+=rk(pts[i],pts[i+1]);return k};
+  let bikeKm=0,vanKm=0,maxH=0,totH=0,overTime=0,reloads=0,active=0,parcels=0;const rows=[];
+  alloc.routes.forEach(r=>{
+    if(!r.stops.length)return;
+    active++;
+    const km=routeKm([HUB,...r.stops,HUB]);
+    const h=km/(r.kind==='van'?o.vanKmh:o.bikeKmh)+r.stops.length*o.serviceMin/60;
+    const p=r.stops.reduce((s,x)=>s+x.parcels,0);
+    if(r.kind==='van')vanKm+=km;else bikeKm+=km;
+    maxH=Math.max(maxH,h);totH+=h;parcels+=p;
+    if(h>DAILY_LIMIT_HOURS)overTime++;
+    reloads+=Math.max(0,Math.ceil(p/r.capacity)-1);
+    rows.push({name:r.name,kind:r.kind,stops:r.stops.length,parcels:p,km,hours:h,capacity:r.capacity});
+  });
+  const trips=buildBaselineTrips(alloc.arr,Math.max(1,gi.baselineCap));
+  let baseKm=0;trips.forEach(t=>{baseKm+=routeKm([HUB,...t,HUB])});
+  const loss=Math.min(.5,Math.max(0,gi.chargeLossPct/100)),mult=1/(1-loss||1);
+  const batt=vanKm*gi.evanKwhKm+bikeKm*gi.ebikeKwhKm,grid=batt*mult;
+  const hubWtt=gi.includeHub?(gi.hubKwh*gi.electricityEf+gi.hubDieselL*gi.dieselWtt):0;
+  const hubTtw=gi.includeHub?(gi.hubDieselL*gi.dieselTtw+gi.hubRefKg*gi.refGwp+gi.hubDirect):0;
+  const elec=grid*gi.electricityEf+gi.vehicleRefKg*gi.refGwp+hubWtt+hubTtw;
+  const fuel=baseKm*gi.dieselL100/100;
+  const sameHub=gi.includeHub&&gi.baselineHub==='same';
+  const base=fuel*(gi.dieselWtt+gi.dieselTtw)+(sameHub?hubWtt+hubTtw:0);
+  return {parcels,active,rows,bikeKm,vanKm,totalKm:bikeKm+vanKm,maxHours:maxH,totalHours:totH,
+    utilisation:totH/(FLEET.length*DAILY_LIMIT_HOURS)*100,overTime,reloads,timeFeasible:overTime===0,
+    baseTrips:trips.length,baseKm,fuelL:fuel,gridKwh:grid,batteryKwh:batt,
+    elecKg:elec,baseKg:base,reductionPct:base>0?(base-elec)/base*100:0,
+    elecGPerParcel:parcels?elec/parcels*1000:0,baseGPerParcel:parcels?base/parcels*1000:0};
+}
+function findTimeCapacity(ppd){
+  let lastOk=0,firstFail=null;
+  for(let n=10;n<=300;n+=5){
+    const m=evalScenario(allocateScenario(n,ppd));
+    if(m.timeFeasible)lastOk=n;else{firstFail=n;break}
+  }
+  return {deliveries:lastOk,firstFail};
+}
+let lastScenarioRun=null,lastSensitivity=null;
+function readScenarioInputs(){return {universe:Math.max(1,nval('scn-universe',213)),mult:Math.max(.1,nval('scn-mult',2.5)),ppd:Math.max(1,Math.round(nval('scn-ppd',1))),adopt:[nval('scn-a1',10),nval('scn-a2',20),nval('scn-a3',30)]}}
+function runScenarioComparison(){
+  const s=readScenarioInputs();
+  const cols=s.adopt.map(a=>{
+    const smes=Math.round(s.universe*a/100),n=Math.max(1,Math.round(smes*s.mult));
+    return Object.assign({adopt:a,smes,deliveries:n},evalScenario(allocateScenario(n,s.ppd)));
+  });
+  lastScenarioRun={inputs:s,cols,capacity:findTimeCapacity(s.ppd),generatedAt:new Date().toISOString()};
+  lastSensitivity=null;
+  renderScenarios();
+}
+function runSensitivity(){
+  const s=readScenarioInputs(),a=s.adopt[1],smes=Math.round(s.universe*a/100),n=Math.max(1,Math.round(smes*s.mult));
+  const alloc=allocateScenario(n,s.ppd),base=evalScenario(alloc),gi=getGlecInputs();
+  const P=[
+    ['Grid emission factor',f=>({inputs:{electricityEf:gi.electricityEf*f}})],
+    ['Diesel use (L/100 km)',f=>({inputs:{dieselL100:gi.dieselL100*f}})],
+    ['E-van energy (kWh/km)',f=>({inputs:{evanKwhKm:gi.evanKwhKm*f}})],
+    ['Diesel van capacity',f=>({inputs:{baselineCap:Math.max(1,Math.round(gi.baselineCap*f))}})],
+    ['E-bike speed',f=>({bikeKmh:MOTOR_EBIKE_SPEED_KMH*f})],
+    ['E-van speed',f=>({vanKmh:EVAN_EST_SPEED_KMH*f})],
+    ['Service time per stop',f=>({serviceMin:SERVICE_MIN_PER_STOP*f})],
+    ['Road-distance factor',f=>({roadFactor:1.45*f})]
+  ];
+  const rows=P.map(([label,fn])=>{
+    const lo=evalScenario(alloc,fn(.8)),hi=evalScenario(alloc,fn(1.2));
+    return {label,redLo:lo.reductionPct-base.reductionPct,redHi:hi.reductionPct-base.reductionPct,hLo:lo.maxHours-base.maxHours,hHi:hi.maxHours-base.maxHours};
+  });
+  rows.sort((x,y)=>(Math.max(Math.abs(y.redLo),Math.abs(y.redHi))+Math.max(Math.abs(y.hLo),Math.abs(y.hHi))*10)-(Math.max(Math.abs(x.redLo),Math.abs(x.redHi))+Math.max(Math.abs(x.hLo),Math.abs(x.hHi))*10));
+  lastSensitivity={adopt:a,deliveries:n,baseReduction:base.reductionPct,baseMaxHours:base.maxHours,rows};
+  renderSensitivity();
+}
+function chipFeas(ok,yes,no){return `<span class="glec-chip ${ok?'green':'red'}">${ok?yes:no}</span>`}
+function renderScenarios(){
+  const box=document.getElementById('scn-output');if(!box||!lastScenarioRun)return;
+  const {cols,capacity,inputs:s}=lastScenarioRun;
+  const th=cols.map(c=>`<th>${fx(c.adopt,0)}%</th>`).join('');
+  const row=(label,fn)=>`<tr><td>${label}</td>${cols.map(c=>`<td>${fn(c)}</td>`).join('')}</tr>`;
+  const maxKg=Math.max(...cols.map(c=>Math.max(c.elecKg,c.baseKg)),1);
+  box.innerHTML=`
+    <div class="glec-card"><b>Same city, three adoption levels</b>
+      <div class="glec-mini" style="margin-top:4px">Synthetic deliveries spread over Stuttgart districts, allocated to the 3 e-bikes + 1 e-van with the planner's own clustering, then compared with a diesel-van baseline using your GLEC inputs. Estimator based: distances are straight-line × 1.45, so treat it as a model, not a routed result.</div>
+      <div style="overflow:auto"><table class="glec-table"><thead><tr><th>Adoption of ${fx(s.universe,0)} SMEs</th>${th}</tr></thead><tbody>
+        ${row('SMEs served',c=>fx(c.smes,0))}
+        ${row('Deliveries per day',c=>fx(c.deliveries,0))}
+        ${row('Busiest resource',c=>`${fx(c.maxHours,2)} h`)}
+        ${row('Within 7.5 h?',c=>chipFeas(c.timeFeasible,'yes','no'))}
+        ${row('Fleet utilisation',c=>fx(c.utilisation,0)+'%')}
+        ${row('Reloads needed*',c=>fx(c.reloads,0))}
+        ${row('E-bike / e-van km',c=>`${fx(c.bikeKm,0)} / ${fx(c.vanKm,0)}`)}
+        ${row('Diesel baseline trips · km',c=>`${c.baseTrips} · ${fx(c.baseKm,0)}`)}
+        ${row('CO₂e SMC-Net (kg)',c=>fx(c.elecKg,1))}
+        ${row('CO₂e diesel (kg)',c=>fx(c.baseKg,1))}
+        ${row('Reduction',c=>`<b>${fx(c.reductionPct,0)}%</b>`)}
+        ${row('g CO₂e per parcel (SMC / diesel)',c=>`${fx(c.elecGPerParcel,0)} / ${fx(c.baseGPerParcel,0)}`)}
+      </tbody></table></div>
+      <div style="margin-top:8px">${cols.map(c=>glecBar(fx(c.adopt,0)+'% SMC',c.elecKg,maxKg)+glecBar(fx(c.adopt,0)+'% diesel',c.baseKg,maxKg,true)).join('')}</div>
+      <div class="glec-source-note"><b>Time-limited capacity:</b> about ${capacity.deliveries} deliveries per day before the busiest resource passes 7.5 h${capacity.firstFail?'':' (search limit reached)'}. The business plan uses a planning cap of 122 per day.<br>*A single load holds ${nval('bike-capacity',12)} parcels per e-bike and ${nval('van-capacity',45)} for the van, so busier days need reloads at the hub. Extra hub returns are not added to km or hours here, so heavy scenarios are optimistic.<br><b>Reading the CO₂e rows:</b> the reduction depends on the GLEC boundary. With the default inputs the hub uses only ${fx(getGlecInputs().hubKwh,0)} kWh per day, so the share saved is higher than a wider-scope figure such as the plan's 49% with German grid power. Set the hub and other inputs to match your boundary before comparing.</div>
+    </div>`;
+}
+function renderSensitivity(){
+  const box=document.getElementById('scn-sens');if(!box||!lastSensitivity)return;
+  const S=lastSensitivity,pp=v=>`${v>=0?'+':''}${v.toFixed(2)}`,hh=v=>`${v>=0?'+':''}${v.toFixed(2)}`;
+  const maxD=Math.max(...S.rows.map(r=>Math.max(Math.abs(r.redLo),Math.abs(r.redHi))),.01);
+  box.innerHTML=`<div class="glec-card"><b>What moves the result</b>
+    <div class="glec-mini" style="margin-top:4px">Each input changed by −20% and +20% for the ${fx(S.adopt,0)}% scenario (${S.deliveries} deliveries). Base: reduction ${fx(S.baseReduction,1)}%, busiest resource ${fx(S.baseMaxHours,2)} h. Allocation is held fixed, and speed changes only show when they affect the busiest resource.</div>
+    <div style="overflow:auto"><table class="glec-table"><thead><tr><th>Input</th><th>Reduction, −20% / +20% (points)</th><th>Busiest h, −20% / +20%</th></tr></thead><tbody>
+    ${S.rows.map(r=>{const w=Math.max(Math.abs(r.redLo),Math.abs(r.redHi))/maxD*100;return `<tr><td>${esc(r.label)}<div class="sens-bar" style="width:${Math.max(3,w)}%"></div></td><td>${pp(r.redLo)} / ${pp(r.redHi)}</td><td>${hh(r.hLo)} / ${hh(r.hHi)}</td></tr>`}).join('')}
+    </tbody></table></div></div>`;
+}
+
+/* ---------- assumptions ---------- */
+function assumptionRows(){
+  const gi=getGlecInputs();
+  return [
+    ['Hub location',`${HUB.lat}, ${HUB.lng}`,'plan','Central Stuttgart micro-hub from the business plan'],
+    ['Fleet','3 motor e-bikes + 1 e-van','plan','Launch setup in the business plan'],
+    ['Daily limit per resource',`${DAILY_LIMIT_HOURS} h`,'plan','Working day used for feasibility'],
+    ['Service time per stop',`${SERVICE_MIN_PER_STOP} min`,'assumption','Validate with pilot or interview data'],
+    ['E-bike speed',`${MOTOR_EBIKE_SPEED_KMH} km/h`,'assumption','Modelled average on road geometry'],
+    ['E-van speed',`${EVAN_EST_SPEED_KMH} km/h`,'estimator','Used when the routing service gives no duration'],
+    ['Road distance factor','1.45 × straight line','estimator','Used in scenarios and as routing fallback'],
+    ['Load capacity',`${nval('bike-capacity',12)} parcels per e-bike, ${nval('van-capacity',45)} per van`,'input','Planner inputs'],
+    ['SME universe and drops',`${nval('scn-universe',213)} SMEs, ${nval('scn-mult',2.5)} drops per SME per day`,'plan','From market screening and the route-density multiplier'],
+    ['Parcel mass',`${gi.parcelKg} kg`,'input','GLEC tab'],
+    ['Diesel van baseline',`${gi.dieselL100} L/100 km, ${gi.baselineCap} parcels per trip`,'input','GLEC tab'],
+    ['Electric energy use',`van ${gi.evanKwhKm} kWh/km, e-bike ${gi.ebikeKwhKm} kWh/km, charging loss ${gi.chargeLossPct}%`,'input','GLEC tab'],
+    ['Emission factors',`diesel ${gi.dieselTtw}+${gi.dieselWtt} kg/L, electricity ${gi.electricityEf} kg/kWh`,'input','GLEC tab, with source fields'],
+    ['Delivery locations in demo and scenarios','Synthetic, seeded, weighted by district','synthetic','Not real SME addresses']
+  ];
+}
+function renderAssumptions(){
+  const box=document.getElementById('scn-assumptions');if(!box)return;
+  const cls={plan:'green',input:'',assumption:'amber',estimator:'amber',synthetic:'red'};
+  box.innerHTML=`<table class="glec-table"><thead><tr><th>Item</th><th>Value</th><th>Type</th></tr></thead><tbody>${assumptionRows().map(r=>`<tr><td>${esc(r[0])}<div class="glec-mini">${esc(r[3])}</div></td><td>${esc(r[1])}</td><td><span class="glec-chip ${cls[r[2]]||''}">${esc(r[2])}</span></td></tr>`).join('')}</tbody></table>`;
+}
+function exportScenariosJson(){
+  if(!lastScenarioRun)runScenarioComparison();
+  const out={title:'SMC-Net scenario study (modelled)',generatedAt:new Date().toISOString(),note:'Synthetic deliveries; estimator-based distances. Not measured data.',assumptions:assumptionRows().map(r=>({item:r[0],value:r[1],type:r[2],note:r[3]})),scenarios:lastScenarioRun.cols.map(c=>({adoptionPct:c.adopt,smes:c.smes,deliveriesPerDay:c.deliveries,busiestResourceHours:c.maxHours,timeFeasible:c.timeFeasible,utilisationPct:c.utilisation,reloadsNeeded:c.reloads,ebikeKm:c.bikeKm,evanKm:c.vanKm,dieselBaselineTrips:c.baseTrips,dieselBaselineKm:c.baseKm,co2eSmcKg:c.elecKg,co2eDieselKg:c.baseKg,reductionPct:c.reductionPct})),timeLimitedCapacityDeliveries:lastScenarioRun.capacity.deliveries,sensitivity:lastSensitivity,currentPlanStakeholders:lastStakeholders};
+  downloadText('smc-net-scenarios.json',JSON.stringify(out,null,2),'application/json');
+}
+function exportScenariosCsv(){
+  if(!lastScenarioRun)runScenarioComparison();
+  const h=['adoption_pct','smes','deliveries_per_day','busiest_resource_h','time_feasible','utilisation_pct','reloads_needed','ebike_km','evan_km','diesel_trips','diesel_km','co2e_smc_kg','co2e_diesel_kg','reduction_pct'];
+  const lines=[h.join(',')].concat(lastScenarioRun.cols.map(c=>[c.adopt,c.smes,c.deliveries,c.maxHours.toFixed(3),c.timeFeasible,c.utilisation.toFixed(1),c.reloads,c.bikeKm.toFixed(1),c.vanKm.toFixed(1),c.baseTrips,c.baseKm.toFixed(1),c.elecKg.toFixed(2),c.baseKg.toFixed(2),c.reductionPct.toFixed(1)].join(',')));
+  downloadText('smc-net-scenarios.csv',lines.join('\n'),'text/csv');
+}
+
+/* ---------- stakeholder views (from the current plan) ---------- */
+let lastStakeholders=null;
+function planEtas(recs){
+  const [hh,mm]=(document.getElementById('start-time')?.value||'08:30').split(':').map(Number);
+  const startMin=(hh||0)*60+(mm||0),etas=[];
+  recs.forEach(r=>{
+    const legs=(r.legKm&&r.legKm.length===r.stops.length+1)?r.legKm:fallbackLegKm([HUB,...r.stops,HUB]);
+    const minPerKm=(r.travelMins!=null&&r.km>0)?r.travelMins/r.km:60/(r.kind==='van'?EVAN_EST_SPEED_KMH:MOTOR_EBIKE_SPEED_KMH);
+    let t=startMin;
+    r.stops.forEach((s,i)=>{t+=legs[i]*minPerKm;etas.push(t);t+=SERVICE_MIN_PER_STOP});
+  });
+  return {etas:etas.sort((a,b)=>a-b),startMin};
+}
+function lensKpi(label,value,sub){return `<div class="glec-kpi"><span>${esc(label)}</span><b>${value}</b>${sub?`<div class="glec-mini">${sub}</div>`:''}</div>`}
+function stakeholderModel(){
+  const rep=lastGlecReport,recs=lastRouteRecords;
+  if(!rep||!recs||!recs.length)return null;
+  const cur=rep.current,base=rep.baseline,nStops=stops.length,parcels=rep.totalParcels;
+  const {etas}=planEtas(recs);
+  const totalH=recs.reduce((s,r)=>s+(r.mins!=null?r.mins/60:0),0);
+  const busiest=Math.max(...recs.map(r=>(r.mins||0)/60));
+  const overTime=recs.filter(r=>(r.mins||0)/60>DAILY_LIMIT_HOURS).length;
+  const bikes=recs.filter(r=>r.kind==='bike').length;
+  const rate=nval('lens-rate',0),win=Math.max(1,nval('lens-charge-h',8));
+  const gridTotal=cur.evanGridKwh+cur.ebikeGridKwh+cur.hubKwh;
+  const before12=etas.length?etas.filter(t=>t<12*60).length/etas.length*100:0;
+  const med=etas.length?etas[Math.floor(etas.length/2)]:0;
+  const tailpipeAvoided=base.ttw-cur.ttw;
+  const motorKmCut=base.km>0?(base.km-cur.evanKm)/base.km*100:0;
+  const S=[
+    {key:'sme',name:'SMEs (receiving shops)',cares:'Reliable delivery times, fewer separate drops, a footprint they can report.',
+      head:['Delivery window',etas.length?`${hm(etas[0])}–${hm(etas[etas.length-1])}`:'—'],
+      kpis:[lensKpi('Stops served',fx(nStops,0),`${fx(parcels,0)} parcels`),lensKpi('Estimated arrival window',etas.length?`${hm(etas[0])}–${hm(etas[etas.length-1])}`:'—',`median ${hm(med)}`),lensKpi('Arriving before 12:00',fx(before12,0)+'%','modelled from route legs'),lensKpi('g CO₂e per parcel',fx(cur.perParcel*1000,0),`diesel baseline ${fx(base.perParcel*1000,0)}`)],
+      validate:'Interviews: acceptable delivery windows, current number of supplier drops per week, willingness to use a shared hub.'},
+    {key:'op',name:'Hub operator',cares:'Using vehicles and riders well without breaking the working day.',
+      head:['Busiest resource',`${fx(busiest,2)} h of ${DAILY_LIMIT_HOURS}`],
+      kpis:[lensKpi('Active resources',`${recs.length} of ${FLEET.length}`),lensKpi('Fleet utilisation',fx(totalH/(FLEET.length*DAILY_LIMIT_HOURS)*100,0)+'%',`${fx(totalH,1)} h of ${fx(FLEET.length*DAILY_LIMIT_HOURS,1)} h`),lensKpi('Parcels per resource-hour',totalH?fx(parcels/totalH,1):'—'),lensKpi(rate>0?'Cost per delivery':'Resources over limit',rate>0?'€'+fx(totalH*rate/Math.max(1,nStops),2):String(overTime),rate>0?`at €${fx(rate,2)} per resource-hour`:'set a cost rate above to see cost')],
+      validate:'Pilot or operator interviews: real service time per stop, loading time at the hub, break rules.'},
+    {key:'city',name:'City and planners',cares:'Less motorised traffic and fewer emissions from freight in the centre.',
+      head:['WTW CO₂e saved',`${fx(rep.difference,1)} kg (${fx(rep.reductionPct,0)}%)`],
+      kpis:[lensKpi('CO₂e saved (WTW)',fx(rep.difference,1)+' kg',`${fx(rep.reductionPct,0)}% vs diesel`),lensKpi('Tailpipe CO₂ avoided',fx(tailpipeAvoided,1)+' kg','local emissions (TTW)'),lensKpi('Diesel litres avoided',fx(base.fuelL,1)),lensKpi('Diesel van trips replaced',fx(base.tripCount,0),`${fx(base.km,0)} km`)],
+      validate:'Municipal data: loading-zone use, NOx and noise, congestion at peak hours. These are not modelled here.'},
+    {key:'res',name:'Residents and local businesses',cares:'Fewer heavy vehicles on streets, cleaner air, less noise.',
+      head:['Diesel van-km removed',fx(base.km,0)+' km'],
+      kpis:[lensKpi('Diesel van-km',`${fx(base.km,0)} → 0`),lensKpi('E-van km on streets',fx(cur.evanKm,0),`${fx(motorKmCut,0)}% less van-km than diesel`),lensKpi('Cargo e-bike km',fx(cur.ebikeKm,0)),lensKpi('Tailpipe CO₂ avoided',fx(tailpipeAvoided,1)+' kg')],
+      validate:'Resident survey or sensor data. Noise and air quality are not modelled, only vehicle-km and tailpipe CO₂.'},
+    {key:'energy',name:'Energy and charging',cares:'Daily electricity demand and how much charging power the depot needs.',
+      head:['Grid demand',fx(gridTotal,1)+' kWh/day'],
+      kpis:[lensKpi('Grid demand per day',fx(gridTotal,1)+' kWh',`van ${fx(cur.evanGridKwh,1)} · bikes ${fx(cur.ebikeGridKwh,1)} · hub ${fx(cur.hubKwh,1)}`),lensKpi('Average load',fx(gridTotal/win,1)+' kW',`if charged over ${fx(win,0)} h`),lensKpi('E-van battery use',fx(cur.evanBatteryKwh,1)+' kWh/day'),lensKpi('Per e-bike battery use',bikes?fx(cur.ebikeBatteryKwh/bikes,2)+' kWh/day':'—')],
+      validate:'Charging data from the depot or the local grid operator: real consumption, peak load, tariffs.'},
+    {key:'carrier',name:'Suppliers and carriers',cares:'Handing over once at the hub instead of many small drops.',
+      head:['Stops handed over',fx(nStops,0)],
+      kpis:[lensKpi('Stops handed to the hub',fx(nStops,0),'one drop at the hub instead'),lensKpi('Parcels consolidated',fx(parcels,0),`${fx(parcels/Math.max(1,recs.length),1)} per route`),lensKpi('Diesel baseline km replaced',fx(base.km,0)),lensKpi('Baseline van trips',fx(base.tripCount,0))],
+      validate:'Carrier interviews: would they hand parcels over at a hub, and under what conditions.'}
+  ];
+  return S;
+}
+function renderStakeholders(){
+  const box=document.getElementById('lens-output');if(!box)return;
+  const S=stakeholderModel();
+  lastStakeholders=S?S.map(x=>({stakeholder:x.name,headline:x.head[0]+': '+x.head[1]})):null;
+  if(!S){
+    box.innerHTML=`<div class="glec-card"><b>No plan yet</b><div class="glec-mini" style="margin-top:4px">Generate routes, or load a ready-made Stuttgart day to see each stakeholder's view.</div><div class="glec-actions"><button class="btn" onclick="loadDemoDay()">Load demo day</button></div></div>`;
+    return;
+  }
+  box.innerHTML=`<div class="glec-card"><b>Headline per stakeholder</b><table class="glec-table"><tbody>${S.map(x=>`<tr><td>${esc(x.name)}</td><td><b>${esc(x.head[0])}</b></td><td>${x.head[1]}</td></tr>`).join('')}</tbody></table></div>`+
+  S.map((x,i)=>`<details class="glec-section"${i===0?' open':''}><summary>${esc(x.name)} <span class="glec-chip amber">modelled</span></summary><div class="glec-section-body"><div class="glec-mini">${esc(x.cares)}</div><div class="glec-kpis">${x.kpis.join('')}</div><div class="glec-source-note"><b>Validate with:</b> ${esc(x.validate)}</div></div></details>`).join('');
+}
+
 // animate summary numbers when they change
 (function(){const ids=['sum-stops','sum-parcels','sum-km','sum-time','sum-co2'];
 ids.forEach(id=>{const el=document.getElementById(id);if(!el)return;
 new MutationObserver(()=>{el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick')}).observe(el,{childList:true,characterData:true,subtree:true});});})();
+setTimeout(()=>{try{renderStakeholders();renderAssumptions();runScenarioComparison()}catch(e){console.warn('Scenario init failed',e)}},0);
 </script>
 </body>
 </html>
