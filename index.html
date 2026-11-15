@@ -176,6 +176,23 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @media(max-width:1300px){.app{grid-template-columns:360px minmax(380px,1fr) 360px}.bottom{grid-template-columns:360px minmax(0,1fr)}.glec-grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:1100px){html,body{overflow:auto;height:auto}.app{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:auto 55vh auto auto;grid-template-areas:"left" "map" "right" "bottom"}.panel,.rightpanel{height:auto;max-height:none}.scroll{max-height:45vh}.bottom{grid-template-columns:1fr;height:auto}.bottomControls{grid-template-columns:repeat(2,1fr)}}
+
+/* declutter pass */
+.panel,.rightpanel,.bottom,.mapwrap{box-shadow:0 1px 2px #0f1f1a14;border:1px solid var(--line)}
+.kicker::before{animation:none;box-shadow:none}
+.app>*{animation:none}
+.glec-card{animation:none}
+.summarybox div{background:transparent;border:0;border-left:2px solid var(--line);border-radius:0;padding:4px 10px}
+.summarybox div:hover{transform:none;background:transparent;border-color:var(--accent)}
+.summarybox{gap:10px 6px}
+.glec-more{appearance:none;-webkit-appearance:none;border:0;background:transparent;padding:8px 10px;flex:0 0 auto;width:auto;cursor:pointer;color:var(--ink-2);font-size:11px;font-weight:700}
+.glec-more.active{background:#fff;color:var(--teal)}
+.glec-fold{padding:0}
+.glec-fold>summary{cursor:pointer;list-style:none;padding:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.glec-fold>summary::after{content:"+";color:var(--ink-3);font-weight:600}
+.glec-fold[open]>summary::after{content:"–"}
+.glec-fold>:not(summary){margin:0 11px 11px}
+.glec-source-note{background:transparent;padding:6px 0 0 8px}
 </style>
 </head>
 <body>
@@ -206,17 +223,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   <aside class="rightpanel">
     <header class="head">
       <div class="glec-headrow">
-        <div><div class="kicker">GLEC v3.2 and ISO 14083</div><h1>Logistics emissions model</h1><div class="muted">Road transport + hub · WTT / TTW / WTW · activity and intensity</div></div>
+        <div><div class="kicker">GLEC v3.2 and ISO 14083</div><h1>Logistics emissions model</h1><div class="muted">Road transport and hub, WTW</div></div>
         <span id="glec-header-status" class="glec-status-pill">Not calculated</span>
       </div>
     </header>
     <nav class="glec-tabs" aria-label="GLEC workspace tabs">
       <button class="glec-tab active" data-glec-tab="results" onclick="switchGlecTab('results',this)">Results</button>
-      <button class="glec-tab" data-glec-tab="inputs" onclick="switchGlecTab('inputs',this)">Inputs</button>
-      <button class="glec-tab" data-glec-tab="quality" onclick="switchGlecTab('quality',this)">Quality</button>
-      <button class="glec-tab" data-glec-tab="report" onclick="switchGlecTab('report',this)">Report</button>
       <button class="glec-tab" data-glec-tab="stakeholders" onclick="switchGlecTab('stakeholders',this)">Stakeholders</button>
       <button class="glec-tab" data-glec-tab="scenarios" onclick="switchGlecTab('scenarios',this)">Scenarios</button>
+      <button class="glec-tab" data-glec-tab="inputs" onclick="switchGlecTab('inputs',this)">Inputs</button>
+      <select id="glec-more" class="glec-tab glec-more" aria-label="More panels" onchange="if(this.value)switchGlecTab(this.value,this)"><option value="">More</option><option value="quality">Quality</option><option value="report">Report</option></select>
     </nav>
     <div class="glec-workspace">
       <section id="glec-pane-results" class="glec-pane active">
@@ -224,7 +240,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       </section>
 
       <section id="glec-pane-inputs" class="glec-pane">
-        <details class="glec-section" open>
+        <details class="glec-section">
           <summary>1. Freight activity and comparison boundary</summary>
           <div class="glec-section-body">
             <div class="glec-grid2">
@@ -238,7 +254,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
           </div>
         </details>
 
-        <details class="glec-section" open>
+        <details class="glec-section">
           <summary>2. Vehicle energy activity</summary>
           <div class="glec-section-body">
             <div class="glec-grid2">
@@ -258,9 +274,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
             <div class="glec-grid2">
               <label class="glec-field">Diesel TTW (kg CO₂e/L)<input id="glec-diesel-ttw" type="number" min="0" step="0.001" value="2.680"></label>
               <label class="glec-field">Diesel WTT (kg CO₂e/L)<input id="glec-diesel-wtt" type="number" min="0" step="0.001" value="0.800"></label>
-              <label class="glec-field">Electricity WTT/WTW (kg CO₂e/kWh)<input id="glec-electricity-ef" type="number" min="0" step="0.001" value="0.350"></label>
+              <label class="glec-field">Grid scenario<select id="glec-grid-scn" onchange="applyGridScenario()"><option value="de2025">Germany grid 2025 (UBA)</option><option value="de2024">Germany grid 2024 (UBA)</option><option value="future">Future grid (illustrative)</option><option value="green">Certified green power (needs evidence)</option><option value="custom">Custom</option></select></label>
+              <label class="glec-field">Electricity WTW (kg CO₂e/kWh)<input id="glec-electricity-ef" type="number" min="0" step="0.001" value="0.406" oninput="markGridCustom()"></label>
               <label class="glec-field">Electricity accounting<select id="glec-electricity-method"><option value="location">Location-based</option><option value="market">Market-based, evidenced</option></select></label>
             </div>
+            <div class="glec-source-note" id="grid-note"></div>
             <div class="glec-source-note">The factors are editable project defaults, not a certification. Enter the factor applicable to the reporting year, geography, fuel blend, and electricity purchasing method, and document the source under Quality.</div>
           </div>
         </details>
@@ -672,6 +690,7 @@ function deadlineNotice(minutes){
 
 let lastRouteRecords=[];
 let lastGlecReport=null;
+setTimeout(()=>{try{updateGridNote()}catch(_){}},0);
 
 function nval(id,fallback=0){const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)?v:fallback}
 function sval(id,fallback=''){return (document.getElementById(id)?.value??fallback).trim()}
@@ -681,17 +700,32 @@ function signed(v,d=2){return `${v>=0?'+':''}${v.toFixed(d)}`}
 function pct(v){return Number.isFinite(v)?v.toFixed(1)+'%':'—'}
 
 function switchGlecTab(name,button){
+  const mo=document.getElementById('glec-more');if(mo&&name!=='quality'&&name!=='report')mo.value='';
   document.querySelectorAll('.glec-pane').forEach(p=>p.classList.toggle('active',p.id===`glec-pane-${name}`));
   document.querySelectorAll('.glec-tab').forEach(b=>b.classList.toggle('active',b===button||b.dataset.glecTab===name));
 }
 
+const GRID_SCN={
+  de2025:{label:'Germany grid 2025',ef:0.406,src:'UBA Climate Change 16/2026: GHG factor of the German electricity mix incl. upstream chains, 406 g CO₂e/kWh (2025, provisional). Direct CO₂ only: 344 g/kWh.'},
+  de2024:{label:'Germany grid 2024',ef:0.414,src:'UBA Climate Change 16/2026: 414 g CO₂e/kWh incl. upstream chains (2024, provisional).'},
+  future:{label:'Future grid (illustrative)',ef:0.200,src:'Assumption, not a forecast: roughly half of today\'s mix, to show sensitivity to grid decarbonisation.'},
+  green:{label:'Certified green power',ef:0.040,src:'Assumption: life-cycle factor for renewable supply. Use only with evidence (guarantees of origin or a PPA); otherwise use location-based.'}
+};
+function applyGridScenario(){const k=document.getElementById('glec-grid-scn').value,c=GRID_SCN[k];if(!c)return;document.getElementById('glec-electricity-ef').value=c.ef;
+  const m=document.getElementById('glec-electricity-method');if(m)m.value=k==='green'?'market':'location';updateGridNote()}
+function markGridCustom(){const sel=document.getElementById('glec-grid-scn');if(sel&&sel.value!=='custom'){const c=GRID_SCN[sel.value];const v=parseFloat(document.getElementById('glec-electricity-ef').value);if(!c||Math.abs(v-c.ef)>1e-9)sel.value='custom'}updateGridNote()}
+function updateGridNote(){const n=document.getElementById('grid-note');if(!n)return;const k=document.getElementById('glec-grid-scn').value,c=GRID_SCN[k];n.textContent=c?c.src:'Custom factor. Record the source and reporting year in your documentation.'}
+function gridLabel(){const k=(document.getElementById('glec-grid-scn')||{}).value;return GRID_SCN[k]?GRID_SCN[k].label:'Custom'}
+function glecAtEf(r,ef){const i=r.inputs,gridKwh=r.current.evanGridKwh+r.current.ebikeGridKwh+(i.includeHub?r.current.hubKwh:0);
+  const cur=r.current.wtw+gridKwh*(ef-i.electricityEf);const hubSame=i.includeHub&&i.baselineHub==='same';
+  const base=r.baseline.wtw+(hubSame?r.current.hubKwh*(ef-i.electricityEf):0);return {cur,base,pct:base?(base-cur)/base*100:0}}
 function getGlecInputs(){
   return {
     parcelKg:Math.max(0.001,nval('glec-parcel-kg',5)),baselineCap:Math.max(1,Math.round(nval('glec-baseline-cap',45))),
     distanceType:sval('glec-distance-type','actual'),baselineHub:sval('glec-baseline-hub','same'),includeHub:checked('glec-include-hub',true),
     dieselL100:Math.max(0,nval('glec-diesel-l100',10)),evanKwhKm:Math.max(0,nval('glec-evan-kwhkm',0.23)),ebikeKwhKm:Math.max(0,nval('glec-ebike-kwhkm',0.018)),chargeLossPct:Math.min(50,Math.max(0,nval('glec-charge-loss',10))),
     vehicleRefKg:Math.max(0,nval('glec-vehicle-ref-kg',0)),refGwp:Math.max(0,nval('glec-ref-gwp',1430)),
-    dieselTtw:Math.max(0,nval('glec-diesel-ttw',2.68)),dieselWtt:Math.max(0,nval('glec-diesel-wtt',0.8)),electricityEf:Math.max(0,nval('glec-electricity-ef',0.35)),electricityMethod:sval('glec-electricity-method','location'),
+    dieselTtw:Math.max(0,nval('glec-diesel-ttw',2.68)),dieselWtt:Math.max(0,nval('glec-diesel-wtt',0.8)),electricityEf:Math.max(0,nval('glec-electricity-ef',0.406)),electricityMethod:sval('glec-electricity-method','location'),
     hubKwh:Math.max(0,nval('glec-hub-kwh',4)),hubDieselL:Math.max(0,nval('glec-hub-diesel-l',0)),hubRefKg:Math.max(0,nval('glec-hub-ref-kg',0)),hubDirect:Math.max(0,nval('glec-hub-direct',0)),
     qDistance:sval('glec-q-distance','modeled'),qMass:sval('glec-q-mass','modeled'),qEnergy:sval('glec-q-energy','modeled'),qFactors:sval('glec-q-factors','official'),
     sourceDiesel:sval('glec-source-diesel'),sourceElectricity:sval('glec-source-electricity'),sourceEnergy:sval('glec-source-energy'),sourceMass:sval('glec-source-mass'),assurance:sval('glec-assurance','none'),deviations:sval('glec-deviations'),
@@ -820,7 +854,9 @@ function renderGlecReport(report){
       <div style="margin-top:8px">${glecBar('Diesel baseline',r.baseline.wtw,max,true)}${glecBar('SMC-Net chain',r.current.wtw,max,false)}</div>
       <div class="glec-source-note">Result: the SMC-Net scenario ${direction} <b>${Math.abs(r.difference).toFixed(2)} kg CO₂e</b> relative to the independently routed diesel comparison.</div>
     </div>
-    <div class="glec-card"><b>Operational and energy-provision split</b>
+    <div class="glec-card"><b>Result by grid scenario</b><div class="glec-mini">Same routes, only the electricity factor changes. Selected: ${esc(gridLabel())}.</div>
+      <table class="glec-table" style="margin-top:6px"><tr><th>Grid</th><th>kg CO₂e/kWh</th><th>SMC-Net kg</th><th>Reduction vs diesel</th></tr>${Object.values(GRID_SCN).map(c=>{const x=glecAtEf(r,c.ef);return `<tr><td>${esc(c.label)}</td><td>${c.ef.toFixed(3)}</td><td>${x.cur.toFixed(2)}</td><td><b>${signed(x.pct,1)}%</b></td></tr>`}).join('')}</table></div>
+    <details class="glec-card glec-fold"><summary>Operational and energy-provision split</summary>
       <table class="glec-table"><thead><tr><th>Chain element</th><th>WTT</th><th>TTW</th><th>WTW</th></tr></thead><tbody>
         <tr><td>SMC transport</td><td>${r.current.transportWtt.toFixed(2)}</td><td>${r.current.transportTtw.toFixed(2)}</td><td>${(r.current.transportWtt+r.current.transportTtw).toFixed(2)}</td></tr>
         <tr><td>SMC hub</td><td>${r.current.hubWtt.toFixed(2)}</td><td>${r.current.hubTtw.toFixed(2)}</td><td>${(r.current.hubWtt+r.current.hubTtw).toFixed(2)}</td></tr>
@@ -829,8 +865,8 @@ function renderGlecReport(report){
         <tr><td>Baseline hub</td><td>${r.baseline.hubWtt.toFixed(2)}</td><td>${r.baseline.hubTtw.toFixed(2)}</td><td>${(r.baseline.hubWtt+r.baseline.hubTtw).toFixed(2)}</td></tr>
         <tr><td><b>Baseline total</b></td><td><b>${r.baseline.wtt.toFixed(2)}</b></td><td><b>${r.baseline.ttw.toFixed(2)}</b></td><td><b>${r.baseline.wtw.toFixed(2)}</b></td></tr>
       </tbody></table><div class="glec-mini" style="margin-top:5px">All values are kg CO₂e. WTW = WTT energy provision + TTW operational emissions.</div>
-    </div>
-    <div class="glec-card"><b>Activity and intensity</b>
+    </details>
+    <details class="glec-card glec-fold"><summary>Activity and intensity</summary>
       <div class="glec-kpis">
         <div class="glec-kpi"><span>SMC road distance</span><b>${r.current.km.toFixed(1)} km</b></div>
         <div class="glec-kpi"><span>Baseline distance</span><b>${r.baseline.km.toFixed(1)} km</b></div>
@@ -846,7 +882,7 @@ function renderGlecReport(report){
         <tr><td>Diesel baseline trips / fuel</td><td>${r.baseline.tripCount} / ${r.baseline.fuelL.toFixed(2)} L</td></tr>
         <tr><td>WTW per parcel</td><td>${r.current.perParcel.toFixed(3)} kg current · ${r.baseline.perParcel.toFixed(3)} kg baseline</td></tr>
       </tbody></table>
-    </div>
+    </details>
     <div class="glec-card"><b>Calculation equations</b><div class="glec-formula">Diesel WTW = route km × L/100 km ÷ 100 × (diesel WTT + diesel TTW)\nElectric WTW = route km × kWh/km ÷ (1 − charging loss) × electricity factor\nTransport activity = Σ(consignment mass in tonnes × routed distance to delivery)\nEmission intensity = total WTW kg CO₂e ÷ tonne-kilometres</div></div>
     <div class="glec-card"><b>Data profile</b><div style="margin-top:5px">Distance ${sourceChip(i.qDistance)} Mass ${sourceChip(i.qMass)} Energy ${sourceChip(i.qEnergy)} Factors ${sourceChip(i.qFactors)}</div></div>`;
 
@@ -876,8 +912,8 @@ async function recalculateGlecModel(){
 }
 
 function resetGlecDefaults(){
-  const defaults={'glec-parcel-kg':5,'glec-baseline-cap':45,'glec-diesel-l100':10,'glec-evan-kwhkm':0.23,'glec-ebike-kwhkm':0.018,'glec-charge-loss':10,'glec-vehicle-ref-kg':0,'glec-ref-gwp':1430,'glec-diesel-ttw':2.68,'glec-diesel-wtt':0.8,'glec-electricity-ef':0.35,'glec-hub-kwh':4,'glec-hub-diesel-l':0,'glec-hub-ref-kg':0,'glec-hub-direct':0};
-  Object.entries(defaults).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});
+  const defaults={'glec-parcel-kg':5,'glec-baseline-cap':45,'glec-diesel-l100':10,'glec-evan-kwhkm':0.23,'glec-ebike-kwhkm':0.018,'glec-charge-loss':10,'glec-vehicle-ref-kg':0,'glec-ref-gwp':1430,'glec-diesel-ttw':2.68,'glec-diesel-wtt':0.8,'glec-electricity-ef':0.406,'glec-hub-kwh':4,'glec-hub-diesel-l':0,'glec-hub-ref-kg':0,'glec-hub-direct':0};
+  Object.entries(defaults).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});const gs=document.getElementById('glec-grid-scn');if(gs)gs.value='de2025';try{updateGridNote()}catch(_){}
 }
 
 function downloadGlec(filename,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500)}
@@ -1118,7 +1154,7 @@ function assumptionRows(){
     ['Parcel mass',`${gi.parcelKg} kg`,'input','GLEC tab'],
     ['Diesel van baseline',`${gi.dieselL100} L/100 km, ${gi.baselineCap} parcels per trip`,'input','GLEC tab'],
     ['Electric energy use',`van ${gi.evanKwhKm} kWh/km, e-bike ${gi.ebikeKwhKm} kWh/km, charging loss ${gi.chargeLossPct}%`,'input','GLEC tab'],
-    ['Emission factors',`diesel ${gi.dieselTtw}+${gi.dieselWtt} kg/L, electricity ${gi.electricityEf} kg/kWh`,'input','GLEC tab, with source fields'],
+    ['Emission factors',`diesel ${gi.dieselTtw}+${gi.dieselWtt} kg/L, electricity ${gi.electricityEf} kg CO₂e/kWh (${gridLabel()})`,'input','GLEC tab. German grid: UBA 16/2026'],
     ['Delivery locations in demo and scenarios','Synthetic, seeded, weighted by district','synthetic','Not real SME addresses']
   ];
 }

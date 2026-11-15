@@ -30,6 +30,7 @@ Small shops in Stuttgart receive many small, irregular deliveries from many supp
 - **Demo day:** one click loads 36 synthetic Stuttgart deliveries and plans them. It works without a HERE key (OSRM routing).
 - **Stakeholders tab:** the same planned day viewed by SMEs, the hub operator, the city, residents, energy and charging, and suppliers/carriers. Each view lists what to validate with real data.
 - **Scenarios tab:** compare 10 / 20 / 30% SME adoption side by side (time feasibility, utilisation, CO₂e vs diesel), estimate the time-limited daily capacity, and run a ±20% sensitivity on the main inputs. An assumptions table marks each value as plan, input, assumption, estimator or synthetic.
+- **Grid scenarios:** the electricity factor defaults to the German grid mix 2025 (UBA Climate Change 16/2026: 406 g CO₂e/kWh incl. upstream, provisional), with 2024, an illustrative future grid, certified green power and custom options. The Results tab shows the reduction under each grid. Future and green values are assumptions, not forecasts.
 - **Export:** GLEC results and the scenario study can be exported as CSV or JSON.
 
 > The Stakeholders and Scenarios results are **modelled**, not measured. Scenario deliveries are synthetic points weighted by district, and distances are straight-line × 1.45. They are meant to show where the system could help each stakeholder, to be tested against interviews, pilot data and municipal data.
